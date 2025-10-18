@@ -134,15 +134,14 @@ def main():
         app.ttkStyle.configure(
             ".",
             font=("Helvetica", EM_SIZE),
-            # padding=[EM_SIZE] * 4,
+            padding=[EM_SIZE] * 4,
         )
-        app.setStretch("both")
-        app.setSticky("nw")
 
         with app.labelFrame("Motor"):
-            app.addLabelScale("Position")
+            app.addScale("Position")
             app.setScaleRange("Position", 0, MOTOR_MAX_POS)
             app.setScaleIncrement("Position", 0.01)
+            app.setScaleSticky("Position", "both")
 
 
 if __name__ == "__main__":
