@@ -9,6 +9,7 @@
 ###############
 
 import sys
+from typing import cast
 
 import gi
 
@@ -35,39 +36,31 @@ MOTOR_PRECISION = 3  # decimal places
 #########################
 
 
-class MainWindow(Adw.ApplicationWindow):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.initialize_window()
-        self.add_header()
-
-        self.add_motor_controls()
-
-    def initialize_window(self):
-        self.set_title(APP_NAME)
-        GLib.set_application_name(APP_NAME)
-
-        self.content = Adw.ToolbarView()
-        self.set_content(self.content)
-
-    def add_header(self):
-        self.header = Adw.HeaderBar()
-        self.content.add_top_bar(self.header)
-
-        # Create a popover
-        self.menu = Gio.Menu.new()
-        self.popover = Gtk.PopoverMenu()
-        self.popover.set_menu_model(self.menu)
-
-        # Create a menu button
-        self.hamburger = Gtk.MenuButton()
-        self.hamburger.set_popover(self.popover)
-        self.hamburger.set_icon_name("open-menu-symbolic")
-
-        # Add menu button to the header bar
-        self.header.pack_start(self.hamburger)
+class Application(Adw.Application):
+    def __init__(self):
+        super().__init__(
+            application_id=APP_ID,
+        )
+        self.connect("activate", self.on_activate)
         self._add_about()
+
+    def on_activate(self, application):
+        builder = Gtk.Builder()
+        builder.add_from_file("gui.ui")
+
+        self.window = cast(
+            Adw.ApplicationWindow, builder.get_object("main_window")
+        )
+        self.window.set_application(application)
+
+        self.position_slider = cast(
+            Gtk.Scale, builder.get_object("position_slider")
+        )
+        # self.position_slider.set_format_value_func(
+        #     lambda scale, value: f"{value:.{MOTOR_PRECISION}f} mm"
+        # )
+
+        self.window.present()
 
     def _add_about(self):
         self.about = Adw.AboutDialog(
@@ -80,61 +73,6 @@ class MainWindow(Adw.ApplicationWindow):
         action = Gio.SimpleAction.new("about", None)
         action.connect("activate", lambda action, param: self.about.present())
         self.add_action(action)
-        self.menu.append("About", "win.about")
-
-    def _add_slider(self):
-        pass
-        # self.slider_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        # self.content.append(self.slider_box)
-
-        # self.slider = Gtk.Scale()
-        # self.slider.set_digits(0)
-        # self.slider.set_range(0, 10)
-        # self.slider.set_draw_value(True)
-        # self.slider.set_value(5)
-
-        # self.slider.connect("value-changed", self.slider_changed)
-        # self.slider_box.append(self.slider)
-
-    def add_motor_controls(self):
-        self.motor_controls = Adw.PreferencesGroup(
-            title="Motor Controls",
-            description="Controls for the mirror motor",
-        )
-        self.content.set_content(self.motor_controls)
-
-        self.motor_position = Gtk.Scale(
-            draw_value=True,
-            adjustment=Gtk.Adjustment(
-                lower=MOTOR_MIN_POS,
-                upper=MOTOR_MAX_POS,
-                step_increment=0.001,
-                page_increment=1.0,
-            ),
-            digits=MOTOR_PRECISION,
-            orientation=Gtk.Orientation.HORIZONTAL,
-        )
-        self.motor_position.set_format_value_func(
-            lambda scale, value: f"{value:.{MOTOR_PRECISION}f} mm"
-        )
-        self.motor_controls.add(
-            Adw.PreferencesRow(
-                title="Mirror Position",
-                child=self.motor_position,
-            )
-        )
-
-
-class Application(Adw.Application):
-    def __init__(self):
-        super().__init__(
-            application_id=APP_ID,
-        )
-        self.connect("activate", self.on_activate)
-
-    def on_activate(self, application):
-        self.window = MainWindow(application=application)
-        self.window.present()
 
 
 ###################

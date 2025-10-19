@@ -1,0 +1,89 @@
+using Gtk 4.0;
+using Adw 1;
+
+Adw.ApplicationWindow main_window {
+    title: "Michelson Interferometer";
+    width-request: 800;
+
+    content: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+            [start]
+            MenuButton {
+                icon-name: "open-menu-symbolic";
+                menu-model: primary_menu;
+            }
+        }
+
+        content: Adw.OverlaySplitView {
+            sidebar: Adw.PreferencesPage {
+                width-request: 350;
+
+                Adw.PreferencesGroup {
+                    title: "Mirror Settings";
+
+                    Adw.SpinRow position_spin {
+                        digits: 3;
+                        title: "Position";
+                        adjustment: position_adjustment;
+
+                        [suffix]
+                        Label {
+                            label: " mm";
+                        }
+                    }
+
+                    Adw.PreferencesRow {
+                        activatable: false;
+
+                        margin-start: 12;
+                        margin-end: 12;
+                        margin-top: 6;
+                        margin-bottom: 6;
+
+                        Scale position_slider {
+                            orientation: horizontal;
+                            hexpand: true;
+                            draw-value: false;
+
+                            adjustment: position_adjustment;
+                            digits: 3;
+                        }
+                    }
+                }
+
+                Adw.PreferencesGroup {
+                    title: "Detector Settings";
+
+                    Adw.SpinRow gain {
+                        digits: 0;
+                        title: "Gain";
+                        adjustment: Adjustment {
+                            value: 0;
+                            lower: 0;
+                            upper: 10;
+                            step-increment: 1;
+                            page-increment: 1;
+                        };
+                    }
+                }
+            };
+        };
+    };
+}
+
+Adjustment position_adjustment {
+    value: 0;
+    lower: 0;
+    upper: 50;
+    step-increment: 0.1;
+    page-increment: 1;
+}
+
+menu primary_menu {
+    item {
+        label: "About";
+        action: "app.about";
+        icon: "help-about-symbolic";
+    }
+}
