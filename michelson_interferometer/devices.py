@@ -13,7 +13,6 @@ from glob import glob
 from pylablib.core.devio.SCPI import SCPIDevice
 from pylablib.devices.Thorlabs import KinesisMotor
 
-
 #################
 ### Constants ###
 #################
