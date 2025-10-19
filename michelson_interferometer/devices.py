@@ -8,43 +8,10 @@
 ### Imports ###
 ###############
 
-import sys
 from glob import glob
 
-try:
-    # from pylablib.devices.Thorlabs import KinesisMotor
-    # from pylablib.core.devio.SCPI import SCPIDevice
-    pass
-except ModuleNotFoundError:
-    print(
-        """Required modules not installed. Please install the necessary
-modules using the following command:
-
-    pip3 install .
-"""
-    )
-    exit(1)
-
-
-##################
-### GUI Import ###
-##################
-
-if sys.version_info >= (3, 13):
-    # Horrible monkey-patching
-
-    import types
-
-    sys.modules["imghdr"] = types.ModuleType("imghdr")
-
-    from appJar import gui
-
-    def monkey_patch_exec(str):
-        exec(str, locals=gui._buildConfigFuncs.__globals__)
-
-    gui._buildConfigFuncs.__globals__["exec"] = monkey_patch_exec
-else:
-    from appJar import gui
+from pylablib.core.devio.SCPI import SCPIDevice
+from pylablib.devices.Thorlabs import KinesisMotor
 
 
 #################
@@ -62,8 +29,6 @@ MOTOR_MAX_POS = 50.0  # millimeters
 DETECTOR_BAUD = 115_200
 DETECTOR_TIMEOUT = 0.1  # seconds
 DETECTOR_NL = "\n"
-
-EM_SIZE = 24  # pixels
 
 
 #########################
@@ -122,27 +87,3 @@ class Detector:
         value = self._device.ask("det:meas?", "int")
         assert isinstance(value, int)
         return value
-
-
-###########
-### GUI ###
-###########
-
-
-def main():
-    with gui("Michelson Interferometer", useTtk=True) as app:
-        app.ttkStyle.configure(
-            ".",
-            font=("Helvetica", EM_SIZE),
-            padding=[EM_SIZE] * 4,
-        )
-
-        with app.labelFrame("Motor"):
-            app.addScale("Position")
-            app.setScaleRange("Position", 0, MOTOR_MAX_POS)
-            app.setScaleIncrement("Position", 0.01)
-            app.setScaleSticky("Position", "both")
-
-
-if __name__ == "__main__":
-    main()
