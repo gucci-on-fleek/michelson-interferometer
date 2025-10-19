@@ -20,39 +20,45 @@ from gi.repository import Adw, Gio, GLib, Gtk  # type: ignore
 ### Constants ###
 #################
 
+APP_NAME = "Michelson Interferometer"
+APP_ID = "ca.maxchernoff.michelson_interferometer"
+APP_VERSION = "0.0"
+APP_WEBSITE = "https://github.com/gucci-on-fleek/michelson-interferometer"
+
+MOTOR_MIN_POS = 0.0  # millimeters
+MOTOR_MAX_POS = 50.0  # millimeters
+MOTOR_PRECISION = 3  # decimal places
+
 
 #########################
 ### Class Definitions ###
 #########################
 
 
-class MainWindow(Gtk.ApplicationWindow):
+class MainWindow(Adw.ApplicationWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._setup_window()
-        self._add_menu_bar()
+        self.initialize_window()
+        self.add_header()
 
-        self.content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.set_child(self.content)
+        self.add_motor_controls()
 
-        self._add_slider()
+    def initialize_window(self):
+        self.set_title(APP_NAME)
+        GLib.set_application_name(APP_NAME)
 
-    def _setup_window(self):
-        self.set_default_size(600, 250)
-        self.set_title("Michelson Interferometer")
-        GLib.set_application_name("Michelson Interferometer")
+        self.content = Adw.ToolbarView()
+        self.set_content(self.content)
 
-    def _add_menu_bar(self):
-        # Create a new menu, containing that action
-        menu = Gio.Menu.new()
-
-        self.header = Gtk.HeaderBar()
-        self.set_titlebar(self.header)
+    def add_header(self):
+        self.header = Adw.HeaderBar()
+        self.content.add_top_bar(self.header)
 
         # Create a popover
+        self.menu = Gio.Menu.new()
         self.popover = Gtk.PopoverMenu()
-        self.popover.set_menu_model(menu)
+        self.popover.set_menu_model(self.menu)
 
         # Create a menu button
         self.hamburger = Gtk.MenuButton()
@@ -61,50 +67,68 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # Add menu button to the header bar
         self.header.pack_start(self.hamburger)
+        self._add_about()
 
-        # Create an action to run a *show about dialog* function we will create
-        action = Gio.SimpleAction.new("about", None)
-        action.connect("activate", self.show_about)
-        self.add_action(action)
-
-        menu.append("About", "win.about")
-
-    def show_about(self, action, param):
-        self.about = Gtk.AboutDialog()
-        self.about.set_transient_for(self)
-        self.about.set_modal(True)
-
-        self.about.set_authors(["Max Chernoff"])
-        self.about.set_license_type(Gtk.License.MPL_2_0)
-        self.about.set_website(
-            "https://github.com/gucci-on-fleek/michelson-interferometer"
+    def _add_about(self):
+        self.about = Adw.AboutDialog(
+            application_name=APP_NAME,
+            developer_name="Max Chernoff",
+            version=APP_VERSION,
+            license_type=Gtk.License.MPL_2_0,
+            website=APP_WEBSITE,
         )
-        self.about.set_website_label("GitHub Repository")
-        self.about.set_version("0.0")
-
-        self.about.set_visible(True)
+        action = Gio.SimpleAction.new("about", None)
+        action.connect("activate", lambda action, param: self.about.present())
+        self.add_action(action)
+        self.menu.append("About", "win.about")
 
     def _add_slider(self):
-        self.slider_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.content.append(self.slider_box)
+        pass
+        # self.slider_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        # self.content.append(self.slider_box)
 
-        self.slider = Gtk.Scale()
-        self.slider.set_digits(0)
-        self.slider.set_range(0, 10)
-        self.slider.set_draw_value(True)
-        self.slider.set_value(5)
+        # self.slider = Gtk.Scale()
+        # self.slider.set_digits(0)
+        # self.slider.set_range(0, 10)
+        # self.slider.set_draw_value(True)
+        # self.slider.set_value(5)
 
-        self.slider.connect("value-changed", self.slider_changed)
-        self.slider_box.append(self.slider)
+        # self.slider.connect("value-changed", self.slider_changed)
+        # self.slider_box.append(self.slider)
 
-    def slider_changed(self, slider):
-        print(int(slider.get_value()))
+    def add_motor_controls(self):
+        self.motor_controls = Adw.PreferencesGroup(
+            title="Motor Controls",
+            description="Controls for the mirror motor",
+        )
+        self.content.set_content(self.motor_controls)
+
+        self.motor_position = Gtk.Scale(
+            draw_value=True,
+            adjustment=Gtk.Adjustment(
+                lower=MOTOR_MIN_POS,
+                upper=MOTOR_MAX_POS,
+                step_increment=0.001,
+                page_increment=1.0,
+            ),
+            digits=MOTOR_PRECISION,
+            orientation=Gtk.Orientation.HORIZONTAL,
+        )
+        self.motor_position.set_format_value_func(
+            lambda scale, value: f"{value:.{MOTOR_PRECISION}f} mm"
+        )
+        self.motor_controls.add(
+            Adw.PreferencesRow(
+                title="Mirror Position",
+                child=self.motor_position,
+            )
+        )
 
 
 class Application(Adw.Application):
     def __init__(self):
         super().__init__(
-            application_id="ca.maxchernoff.michelson_interferometer"
+            application_id=APP_ID,
         )
         self.connect("activate", self.on_activate)
 
