@@ -7,22 +7,25 @@ using Adw 1;
 
 template $MainWindow: Adw.ApplicationWindow {
     title: "Michelson Interferometer";
-    width-request: 800;
 
-    content: Adw.ToolbarView {
-        [top]
-        Adw.HeaderBar {
-            [start]
-            MenuButton {
-                icon-name: "open-menu-symbolic";
-                menu-model: primary_menu;
+    Adw.OverlaySplitView {
+        pin-sidebar: true;
+
+        [sidebar]
+        Adw.ToolbarView {
+            [top]
+            Adw.HeaderBar {
+                title-widget: Adw.WindowTitle {
+                    title: "Settings";
+                };
+
+                [start]
+                MenuButton {
+                    icon-name: "open-menu-symbolic";
+                    menu-model: primary_menu;
+                }
             }
-        }
 
-        content: Adw.OverlaySplitView {
-            pin-sidebar: true;
-
-            [sidebar]
             Adw.PreferencesPage {
                 width-request: 400;
                 title: "Settings";
@@ -235,8 +238,55 @@ template $MainWindow: Adw.ApplicationWindow {
                     }
                 }
             }
-        };
-    };
+        }
+
+        [content]
+        Adw.ToolbarView {
+            [top]
+            Adw.HeaderBar {
+                title-widget: Adw.WindowTitle {
+                    title: "Data";
+                };
+            }
+
+            [bottom]
+            ActionBar {
+                Box {
+                    styles [
+                        "toolbar",
+                    ]
+
+                    margin-start: 12;
+                    margin-end: 12;
+                    margin-top: 6;
+                    margin-bottom: 6;
+                    halign: fill;
+
+                    Button {
+                        label: "Clear";
+                        hexpand: true;
+
+                        styles [
+                            "destructive-action",
+                        ]
+
+                        clicked => $clear_data();
+                    }
+
+                    Adw.SplitButton {
+                        label: "Save";
+                        hexpand: true;
+
+                        styles [
+                            "suggested-action",
+                        ]
+
+                        clicked => $clear_data();
+                    }
+                }
+            }
+        }
+    }
 }
 
 Adjustment position_adjustment {
