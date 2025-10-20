@@ -10,6 +10,7 @@
 
 import sys
 from typing import cast
+from pathlib import Path
 
 import gi
 
@@ -46,7 +47,7 @@ class Application(Adw.Application):
 
     def on_activate(self, application):
         builder = Gtk.Builder()
-        builder.add_from_file("gui.ui")
+        builder.add_from_file(str(Path(__file__).parent / "main.ui"))
 
         self.window = cast(
             Adw.ApplicationWindow, builder.get_object("main_window")

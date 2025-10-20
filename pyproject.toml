@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["pygobject-stubs ~= 2.13"]
+requires = ["pygobject-stubs ~= 2.13", "setuptools >= 40.8"]
 
 
 [tool.black]

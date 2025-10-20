@@ -1,3 +1,7 @@
+// Michelson Interferometer Control Software
+// https://github.com/gucci-on-fleek/michelson-interferometer
+// SPDX-License-Identifier: MPL-2.0+
+// SPDX-FileCopyrightText: 2025 Max Chernoff
 using Gtk 4.0;
 using Adw 1;
 
@@ -35,7 +39,6 @@ Adw.ApplicationWindow main_window {
 
                     Adw.PreferencesRow {
                         activatable: false;
-
                         margin-start: 12;
                         margin-end: 12;
                         margin-top: 6;
@@ -45,7 +48,6 @@ Adw.ApplicationWindow main_window {
                             orientation: horizontal;
                             hexpand: true;
                             draw-value: false;
-
                             adjustment: position_adjustment;
                             digits: 3;
                         }
@@ -58,6 +60,7 @@ Adw.ApplicationWindow main_window {
                     Adw.SpinRow gain {
                         digits: 0;
                         title: "Gain";
+
                         adjustment: Adjustment {
                             value: 0;
                             lower: 0;
