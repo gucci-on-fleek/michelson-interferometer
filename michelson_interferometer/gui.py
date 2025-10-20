@@ -8,8 +8,13 @@
 ### Imports ###
 ###############
 
+import asyncio
+
 import sys
-from typing import cast
+from matplotlib.backends.backend_gtk4agg import (
+    FigureCanvasGTK4Agg as FigureCanvas,
+)
+
 from pathlib import Path
 
 import gi
@@ -17,6 +22,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk  # type: ignore
+from gi.events import GLibEventLoopPolicy  # type: ignore
 
 #################
 ### Constants ###
@@ -65,6 +71,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     position: Adw.SpinRow = Gtk.Template.Child()
     save_as: Gtk.FileDialog = Gtk.Template.Child()
+    value_plot_box: Gtk.Box = Gtk.Template.Child()
+    position_plot_box: Gtk.Box = Gtk.Template.Child()
 
     @Gtk.Template.Callback()
     def position_changed(self, spinner: Adw.SpinRow) -> None:
@@ -94,5 +102,8 @@ class MainWindow(Adw.ApplicationWindow):
 ### Entry Point ###
 ###################
 
-appplication = Application()
-appplication.run(sys.argv)
+if __name__ == "__main__":
+    asyncio.set_event_loop_policy(GLibEventLoopPolicy())
+
+    appplication = Application()
+    appplication.run(sys.argv)

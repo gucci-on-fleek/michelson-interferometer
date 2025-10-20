@@ -294,17 +294,58 @@ template $MainWindow: Adw.ApplicationWindow {
                     }
                 }
             }
+
+            Box {
+                hexpand: true;
+                vexpand: true;
+                orientation: vertical;
+                halign: start;
+                valign: start;
+                spacing: 6;
+                margin-start: 12;
+                margin-end: 12;
+                margin-top: 12;
+                margin-bottom: 12;
+
+                Label {
+                    label: "Detector Value";
+
+                    styles [
+                        "heading",
+                    ]
+                }
+
+                Box value_plot_box {
+                    hexpand: true;
+                    vexpand: true;
+                }
+
+                Label {
+                    label: "Mirror Position";
+
+                    styles [
+                        "heading",
+                    ]
+                }
+
+                Box position_plot_box {
+                    hexpand: true;
+                    vexpand: true;
+                }
+            }
         }
     }
 }
 
 FileDialog save_as {
+    title: "Save as TSV";
+
     filters: Gio.ListStore {
         FileFilter {
-            name: "Folder";
+            name: "TSV";
 
             mime-types: [
-                "inode/directory",
+                "text/tab-separated-values",
             ];
         }
     };
