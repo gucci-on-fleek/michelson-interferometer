@@ -31,6 +31,8 @@ MOTOR_MIN_POS = 0.0  # millimeters
 MOTOR_MAX_POS = 50.0  # millimeters
 MOTOR_PRECISION = 3  # decimal places
 
+UI_PATH = Path(__file__).parent
+
 
 #########################
 ### Class Definitions ###
@@ -42,25 +44,10 @@ class Application(Adw.Application):
         super().__init__(
             application_id=APP_ID,
         )
-        self.connect("activate", self.on_activate)
         self._add_about()
 
-    def on_activate(self, application):
-        builder = Gtk.Builder()
-        builder.add_from_file(str(Path(__file__).parent / "main.ui"))
-
-        self.window = cast(
-            Adw.ApplicationWindow, builder.get_object("main_window")
-        )
-        self.window.set_application(application)
-
-        self.position_slider = cast(
-            Gtk.Scale, builder.get_object("position_slider")
-        )
-        # self.position_slider.set_format_value_func(
-        #     lambda scale, value: f"{value:.{MOTOR_PRECISION}f} mm"
-        # )
-
+    def do_activate(self):
+        self.window = MainWindow(application=self)
         self.window.present()
 
     def _add_about(self):
@@ -74,6 +61,16 @@ class Application(Adw.Application):
         action = Gio.SimpleAction.new("about", None)
         action.connect("activate", lambda action, param: self.about.present())
         self.add_action(action)
+
+
+@Gtk.Template(filename=str(UI_PATH / "main.ui"))
+class MainWindow(Adw.ApplicationWindow):
+    __gtype_name__ = "MainWindow"
+
+    position_slider = Gtk.Template.Child()
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 
 ###################
