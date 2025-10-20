@@ -20,16 +20,22 @@ template $MainWindow: Adw.ApplicationWindow {
         }
 
         content: Adw.OverlaySplitView {
-            sidebar: Adw.PreferencesPage {
-                width-request: 350;
+            pin-sidebar: true;
+
+            [sidebar]
+            Adw.PreferencesPage {
+                width-request: 400;
+                title: "Settings";
 
                 Adw.PreferencesGroup {
-                    title: "Mirror Settings";
+                    title: "Mirror Position";
 
-                    Adw.SpinRow position_spin {
-                        digits: 3;
-                        title: "Position";
+                    Adw.SpinRow position {
+                        changed => $position_changed();
+                        title: "Current Position";
                         adjustment: position_adjustment;
+                        snap-to-ticks: true;
+                        digits: 3;
 
                         [suffix]
                         Label {
@@ -39,26 +45,36 @@ template $MainWindow: Adw.ApplicationWindow {
 
                     Adw.PreferencesRow {
                         activatable: false;
-                        margin-start: 12;
-                        margin-end: 12;
-                        margin-top: 6;
-                        margin-bottom: 6;
 
-                        Scale position_slider {
-                            orientation: horizontal;
-                            hexpand: true;
-                            draw-value: false;
-                            adjustment: position_adjustment;
-                            digits: 3;
+                        Box {
+                            margin-start: 12;
+                            margin-end: 12;
+                            margin-top: 6;
+                            margin-bottom: 6;
+
+                            Scale {
+                                orientation: horizontal;
+                                hexpand: true;
+                                adjustment: position_adjustment;
+                                digits: 3;
+                            }
                         }
+                    }
+
+                    Adw.ButtonRow {
+                        activated => $home_motor();
+                        title: "Home Motor";
+                        start-icon-name: "go-home-symbolic";
                     }
                 }
 
                 Adw.PreferencesGroup {
                     title: "Detector Settings";
 
-                    Adw.SpinRow gain {
+                    Adw.SpinRow {
+                        changed => $gain_changed();
                         digits: 0;
+                        snap-to-ticks: true;
                         title: "Gain";
 
                         adjustment: Adjustment {
@@ -70,7 +86,155 @@ template $MainWindow: Adw.ApplicationWindow {
                         };
                     }
                 }
-            };
+
+                Adw.PreferencesGroup {
+                    title: "Motion";
+
+                    Adw.SpinRow initial {
+                        title: "Initial Position";
+                        snap-to-ticks: true;
+
+                        adjustment: Adjustment {
+                            value: 0;
+                            lower: 0;
+                            upper: 50;
+                            step-increment: 0.1;
+                            page-increment: 1;
+                        };
+
+                        digits: 3;
+
+                        [suffix]
+                        Label {
+                            label: " mm";
+                        }
+                    }
+
+                    Adw.SpinRow final {
+                        title: "Final Position";
+                        snap-to-ticks: true;
+
+                        adjustment: Adjustment {
+                            value: 0;
+                            lower: 0;
+                            upper: 50;
+                            step-increment: 0.1;
+                            page-increment: 1;
+                        };
+
+                        digits: 3;
+
+                        [suffix]
+                        Label {
+                            label: " mm";
+                        }
+                    }
+
+                    Adw.SpinRow step {
+                        title: "Step Size";
+                        snap-to-ticks: true;
+
+                        adjustment: Adjustment {
+                            value: 0;
+                            lower: 0;
+                            upper: 50;
+                            step-increment: 0.1;
+                            page-increment: 1;
+                        };
+
+                        digits: 3;
+
+                        [suffix]
+                        Label {
+                            label: " mm";
+                        }
+                    }
+
+                    Adw.PreferencesRow {
+                        activatable: false;
+
+                        Box {
+                            styles [
+                                "toolbar",
+                            ]
+
+                            margin-start: 12;
+                            margin-end: 12;
+                            margin-top: 6;
+                            margin-bottom: 6;
+                            halign: fill;
+
+                            Button {
+                                hexpand: true;
+
+                                Image {
+                                    icon-name: "media-skip-backward-symbolic";
+                                }
+                            }
+
+                            Button {
+                                hexpand: true;
+
+                                Image {
+                                    icon-name: "media-seek-backward-symbolic";
+                                }
+                            }
+
+                            Button {
+                                hexpand: true;
+
+                                Image {
+                                    icon-name: "go-previous-symbolic";
+                                }
+                            }
+
+                            Separator {
+                                styles [
+                                    "spacer",
+                                ]
+                            }
+
+                            Button {
+                                hexpand: true;
+
+                                Image {
+                                    icon-name: "media-playback-stop-symbolic";
+                                }
+                            }
+
+                            Separator {
+                                styles [
+                                    "spacer",
+                                ]
+                            }
+
+                            Button {
+                                hexpand: true;
+
+                                Image {
+                                    icon-name: "go-next-symbolic";
+                                }
+                            }
+
+                            Button {
+                                hexpand: true;
+
+                                Image {
+                                    icon-name: "media-seek-forward-symbolic";
+                                }
+                            }
+
+                            Button {
+                                hexpand: true;
+
+                                Image {
+                                    icon-name: "media-skip-forward-symbolic";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         };
     };
 }

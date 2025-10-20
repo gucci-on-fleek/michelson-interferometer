@@ -27,10 +27,6 @@ APP_ID = "ca.maxchernoff.michelson_interferometer"
 APP_VERSION = "0.0"
 APP_WEBSITE = "https://github.com/gucci-on-fleek/michelson-interferometer"
 
-MOTOR_MIN_POS = 0.0  # millimeters
-MOTOR_MAX_POS = 50.0  # millimeters
-MOTOR_PRECISION = 3  # decimal places
-
 UI_PATH = Path(__file__).parent
 
 
@@ -40,17 +36,16 @@ UI_PATH = Path(__file__).parent
 
 
 class Application(Adw.Application):
-    def __init__(self):
-        super().__init__(
-            application_id=APP_ID,
-        )
+    def __init__(self) -> None:
+        super().__init__(application_id=APP_ID)
+        GLib.set_prgname(APP_NAME)
         self._add_about()
 
-    def do_activate(self):
+    def do_activate(self) -> None:
         self.window = MainWindow(application=self)
         self.window.present()
 
-    def _add_about(self):
+    def _add_about(self) -> None:
         self.about = Adw.AboutDialog(
             application_name=APP_NAME,
             developer_name="Max Chernoff",
@@ -67,10 +62,21 @@ class Application(Adw.Application):
 class MainWindow(Adw.ApplicationWindow):
     __gtype_name__ = "MainWindow"
 
-    position_slider = Gtk.Template.Child()
+    position: Adw.SpinRow = Gtk.Template.Child()
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    @Gtk.Template.Callback()
+    def position_changed(self, spinner: Adw.SpinRow) -> None:
+        value = spinner.get_value()
+        print(f"Position changed to: {value}")  # TODO!
+
+    @Gtk.Template.Callback()
+    def gain_changed(self, spinner: Adw.SpinRow) -> None:
+        value = spinner.get_value()
+        print(f"Gain changed to: {value}")  # TODO!
+
+    @Gtk.Template.Callback()
+    def home_motor(self, button: Adw.ButtonRow) -> None:  # type: ignore
+        print("Homing motor...")  # TODO!
 
 
 ###################
