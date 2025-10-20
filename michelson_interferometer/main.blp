@@ -167,24 +167,27 @@ template $MainWindow: Adw.ApplicationWindow {
                             margin-bottom: 6;
                             halign: fill;
 
-                            Button {
+                            Button go_to_initial {
                                 hexpand: true;
+                                clicked => $go_to_initial();
 
                                 Image {
                                     icon-name: "media-skip-backward-symbolic";
                                 }
                             }
 
-                            Button {
+                            Button run_backwards {
                                 hexpand: true;
+                                clicked => $run_backwards();
 
                                 Image {
                                     icon-name: "media-seek-backward-symbolic";
                                 }
                             }
 
-                            Button {
+                            Button step_backwards {
                                 hexpand: true;
+                                clicked => $step_backwards();
 
                                 Image {
                                     icon-name: "go-previous-symbolic";
@@ -197,8 +200,9 @@ template $MainWindow: Adw.ApplicationWindow {
                                 ]
                             }
 
-                            Button {
+                            Button stop_motion {
                                 hexpand: true;
+                                clicked => $stop_motion();
 
                                 styles [
                                     "suggested-action",
@@ -215,24 +219,27 @@ template $MainWindow: Adw.ApplicationWindow {
                                 ]
                             }
 
-                            Button {
+                            Button step_forwards {
                                 hexpand: true;
+                                clicked => $step_forwards();
 
                                 Image {
                                     icon-name: "go-next-symbolic";
                                 }
                             }
 
-                            Button {
+                            Button run_forwards {
                                 hexpand: true;
+                                clicked => $run_forwards();
 
                                 Image {
                                     icon-name: "media-seek-forward-symbolic";
                                 }
                             }
 
-                            Button {
+                            Button go_to_final {
                                 hexpand: true;
+                                clicked => $go_to_final();
 
                                 Image {
                                     icon-name: "media-skip-forward-symbolic";
@@ -245,7 +252,7 @@ template $MainWindow: Adw.ApplicationWindow {
         }
 
         [content]
-        Adw.ToolbarView {
+        Adw.ToolbarView data_panel {
             [top]
             Adw.HeaderBar {
                 title-widget: Adw.WindowTitle {
@@ -339,6 +346,7 @@ template $MainWindow: Adw.ApplicationWindow {
 
 FileDialog save_as {
     title: "Save as TSV";
+    accept-label: "Save";
 
     filters: Gio.ListStore {
         FileFilter {
@@ -349,6 +357,14 @@ FileDialog save_as {
             ];
         }
     };
+}
+
+Adw.AboutDialog about_dialog {
+    application-name: "Michelson Interferometer";
+    developer-name: "Max Chernoff";
+    version: "0.0";
+    license-type: mpl_2_0;
+    website: "https://github.com/gucci-on-fleek/michelson-interferometer";
 }
 
 Adjustment position_adjustment {
@@ -362,7 +378,7 @@ Adjustment position_adjustment {
 menu primary_menu {
     item {
         label: "About";
-        action: "app.about";
+        action: "win.about";
         icon: "help-about-symbolic";
     }
 }
