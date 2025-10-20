@@ -39,6 +39,7 @@ class Application(Adw.Application):
     def __init__(self) -> None:
         super().__init__(application_id=APP_ID)
         GLib.set_prgname(APP_NAME)
+
         self._add_about()
 
     def do_activate(self) -> None:
@@ -63,6 +64,7 @@ class MainWindow(Adw.ApplicationWindow):
     __gtype_name__ = "MainWindow"
 
     position: Adw.SpinRow = Gtk.Template.Child()
+    save_as: Gtk.FileDialog = Gtk.Template.Child()
 
     @Gtk.Template.Callback()
     def position_changed(self, spinner: Adw.SpinRow) -> None:
@@ -77,6 +79,15 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def home_motor(self, button: Adw.ButtonRow) -> None:  # type: ignore
         print("Homing motor...")  # TODO!
+
+    @Gtk.Template.Callback()
+    def save_data(self, button: Adw.SplitButton) -> None:
+        self.save_as.open()
+        print("Saving data...")  # TODO!
+
+    @Gtk.Template.Callback()
+    def clear_data(self, button: Gtk.Button) -> None:
+        print("Clearing data...")  # TODO!
 
 
 ###################

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0+
 // SPDX-FileCopyrightText: 2025 Max Chernoff
 using Gtk 4.0;
+using Gio 2.0;
 using Adw 1;
 
 template $MainWindow: Adw.ApplicationWindow {
@@ -16,7 +17,7 @@ template $MainWindow: Adw.ApplicationWindow {
             [top]
             Adw.HeaderBar {
                 title-widget: Adw.WindowTitle {
-                    title: "Settings";
+                    title: "Controls";
                 };
 
                 [start]
@@ -27,7 +28,6 @@ template $MainWindow: Adw.ApplicationWindow {
             }
 
             Adw.PreferencesPage {
-                width-request: 400;
                 title: "Settings";
 
                 Adw.PreferencesGroup {
@@ -81,9 +81,9 @@ template $MainWindow: Adw.ApplicationWindow {
                         title: "Gain";
 
                         adjustment: Adjustment {
-                            value: 0;
                             lower: 0;
                             upper: 10;
+                            value: 3;
                             step-increment: 1;
                             page-increment: 1;
                         };
@@ -98,9 +98,9 @@ template $MainWindow: Adw.ApplicationWindow {
                         snap-to-ticks: true;
 
                         adjustment: Adjustment {
-                            value: 0;
                             lower: 0;
                             upper: 50;
+                            value: 0;
                             step-increment: 0.1;
                             page-increment: 1;
                         };
@@ -118,9 +118,9 @@ template $MainWindow: Adw.ApplicationWindow {
                         snap-to-ticks: true;
 
                         adjustment: Adjustment {
-                            value: 0;
                             lower: 0;
                             upper: 50;
+                            value: 50;
                             step-increment: 0.1;
                             page-increment: 1;
                         };
@@ -138,9 +138,9 @@ template $MainWindow: Adw.ApplicationWindow {
                         snap-to-ticks: true;
 
                         adjustment: Adjustment {
-                            value: 0;
                             lower: 0;
                             upper: 50;
+                            value: 1;
                             step-increment: 0.1;
                             page-increment: 1;
                         };
@@ -199,6 +199,10 @@ template $MainWindow: Adw.ApplicationWindow {
 
                             Button {
                                 hexpand: true;
+
+                                styles [
+                                    "suggested-action",
+                                ]
 
                                 Image {
                                     icon-name: "media-playback-stop-symbolic";
@@ -273,15 +277,20 @@ template $MainWindow: Adw.ApplicationWindow {
                         clicked => $clear_data();
                     }
 
-                    Adw.SplitButton {
-                        label: "Save";
+                    Separator {
+                        styles [
+                            "spacer",
+                        ]
+                    }
+
+                    Button {
+                        label: "Save as…";
                         hexpand: true;
+                        clicked => $save_data();
 
                         styles [
                             "suggested-action",
                         ]
-
-                        clicked => $clear_data();
                     }
                 }
             }
@@ -289,10 +298,22 @@ template $MainWindow: Adw.ApplicationWindow {
     }
 }
 
+FileDialog save_as {
+    filters: Gio.ListStore {
+        FileFilter {
+            name: "Folder";
+
+            mime-types: [
+                "inode/directory",
+            ];
+        }
+    };
+}
+
 Adjustment position_adjustment {
-    value: 0;
     lower: 0;
     upper: 50;
+    value: 0;
     step-increment: 0.1;
     page-increment: 1;
 }
