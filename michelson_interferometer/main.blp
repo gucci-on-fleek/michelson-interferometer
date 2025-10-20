@@ -93,7 +93,7 @@ template $MainWindow: Adw.ApplicationWindow {
                 Adw.PreferencesGroup {
                     title: "Motion";
 
-                    Adw.SpinRow initial {
+                    Adw.SpinRow initial_position {
                         title: "Initial Position";
                         snap-to-ticks: true;
 
@@ -113,7 +113,7 @@ template $MainWindow: Adw.ApplicationWindow {
                         }
                     }
 
-                    Adw.SpinRow final {
+                    Adw.SpinRow final_position {
                         title: "Final Position";
                         snap-to-ticks: true;
 
@@ -200,7 +200,7 @@ template $MainWindow: Adw.ApplicationWindow {
                                 ]
                             }
 
-                            Button stop_motion {
+                            Button stop_motion_button {
                                 hexpand: true;
                                 clicked => $stop_motion();
 

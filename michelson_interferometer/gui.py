@@ -18,6 +18,8 @@ from matplotlib.backends.backend_gtk4agg import (
 )
 from matplotlib.figure import Figure
 
+from . import devices_mock as devices
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.events import GLibEventLoopPolicy  # type: ignore
@@ -52,13 +54,15 @@ class Application(Adw.Application):
 class MainWindow(Adw.ApplicationWindow):
     __gtype_name__ = "MainWindow"
 
-    position: Adw.SpinRow = Gtk.Template.Child()
-    save_as: Gtk.FileDialog = Gtk.Template.Child()
-    value_plot_box: Gtk.Box = Gtk.Template.Child()
-    position_plot_box: Gtk.Box = Gtk.Template.Child()
-    current_motion: Gtk.Button = Gtk.Template.Child("stop_motion")
     about_dialog: Adw.AboutDialog = Gtk.Template.Child()
     data_panel: Adw.ToolbarView = Gtk.Template.Child()
+    final_position: Adw.SpinRow = Gtk.Template.Child()
+    initial_position: Adw.SpinRow = Gtk.Template.Child()
+    position_plot_box: Gtk.Box = Gtk.Template.Child()
+    position: Adw.SpinRow = Gtk.Template.Child()
+    save_as: Gtk.FileDialog = Gtk.Template.Child()
+    stop_motion_button: Gtk.Button = Gtk.Template.Child()
+    value_plot_box: Gtk.Box = Gtk.Template.Child()
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -72,6 +76,10 @@ class MainWindow(Adw.ApplicationWindow):
         display = self.get_display()
         screen = display.get_monitors()[0]
         self.resolution: float = screen.get_scale() * 96  # type: ignore
+
+        self.motor = devices.Motor()
+        self.detector = devices.Detector()
+        self.current_motion = self.stop_motion_button
 
     def draw_plot(self) -> None:
         # TODO!
@@ -95,7 +103,7 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def position_changed(self, spinner: Adw.SpinRow) -> None:
         value = spinner.get_value()
-        print(f"Position changed to: {value}")  # TODO!
+        self.motor.position = value
 
     @Gtk.Template.Callback()
     def gain_changed(self, spinner: Adw.SpinRow) -> None:
@@ -104,7 +112,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     @Gtk.Template.Callback()
     def home_motor(self, button: Adw.ButtonRow) -> None:  # type: ignore
-        print("Homing motor...")  # TODO!
+        self.motor.home()
 
     def set_current_motion(self, motion: Gtk.Button) -> None:
         self.current_motion.remove_css_class("suggested-action")
@@ -114,8 +122,9 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def go_to_initial(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        self.draw_plot()  # TODO!
-        print("Going to initial position...")  # TODO!
+        value = self.initial_position.get_value()
+        self.motor.position = value
+        self.set_current_motion(self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def run_backwards(self, button: Gtk.Button) -> None:
@@ -125,7 +134,10 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def step_backwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        print("Stepping backwards...")  # TODO!
+        current = self.motor.position
+        step = self.position.get_value()
+        self.motor.position = current - step
+        self.set_current_motion(self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def stop_motion(self, button: Gtk.Button) -> None:
@@ -135,7 +147,10 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def step_forwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        print("Stepping forwards...")  # TODO!
+        current = self.motor.position
+        step = self.position.get_value()
+        self.motor.position = current + step
+        self.set_current_motion(self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def run_forwards(self, button: Gtk.Button) -> None:
@@ -145,7 +160,9 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def go_to_final(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        print("Going to final position...")  # TODO!
+        value = self.final_position.get_value()
+        self.motor.position = value
+        self.set_current_motion(self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def save_data(self, button: Adw.SplitButton) -> None:

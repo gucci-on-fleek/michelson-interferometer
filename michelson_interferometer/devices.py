@@ -49,6 +49,10 @@ class Motor:
             scale=MOTOR_SCALE,  # type: ignore[arg-type]
         )
 
+        self.home()
+
+    def home(self) -> None:
+        """Homes the motor."""
         self._device.home(sync=True, force=True)
 
     @property
