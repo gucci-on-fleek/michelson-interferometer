@@ -59,14 +59,14 @@ class MainWindow(Adw.ApplicationWindow):
 
     about_dialog: Adw.AboutDialog = Gtk.Template.Child()
     data_panel: Adw.ToolbarView = Gtk.Template.Child()
+    detector_value: Gtk.Label = Gtk.Template.Child()
     final_position: Adw.SpinRow = Gtk.Template.Child()
     initial_position: Adw.SpinRow = Gtk.Template.Child()
-    position_plot_box: Gtk.Box = Gtk.Template.Child()
+    plot_box: Gtk.Box = Gtk.Template.Child()
     position: Adw.SpinRow = Gtk.Template.Child()
     save_as: Gtk.FileDialog = Gtk.Template.Child()
     step: Adw.SpinRow = Gtk.Template.Child()
     stop_motion_button: Gtk.Button = Gtk.Template.Child()
-    value_plot_box: Gtk.Box = Gtk.Template.Child()
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -95,25 +95,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.ignore_position_changes = True
         self.position.set_value(value)
         self.ignore_position_changes = False
-
-    def draw_plot(self) -> None:
-        # TODO!
-        figure = Figure(figsize=(1, 1), dpi=self.resolution)
-        ax = figure.add_subplot()
-
-        ax.set_title("Interferometer Value")
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Value (arb. units)")
-        ax.plot([0, 1, 2, 3], [0, 1, 2, 3])
-
-        canvas = FigureCanvas(figure)
-        width = self.data_panel.get_width()
-        canvas.set_size_request(int(0.9 * width), int(0.9 * width))
-
-        child = self.value_plot_box.get_first_child()
-        if child:
-            self.value_plot_box.remove(child)
-        self.value_plot_box.append(canvas)
 
     @Gtk.Template.Callback()
     def position_changed(self, spinner: Adw.SpinRow) -> None:
@@ -190,7 +171,26 @@ class MainWindow(Adw.ApplicationWindow):
         print("Clearing data...")  # TODO!
 
     def update_detector(self, value: int) -> None:
-        print(f"Detector value: {value}")  # TODO!
+        self.detector_value.set_label(f"{value}")
+
+    def draw_plot(self) -> None:
+        # TODO!
+        figure = Figure(figsize=(1, 1), dpi=self.resolution)
+        ax = figure.add_subplot()
+
+        ax.set_title("Interferometer Value")
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Value (arb. units)")
+        ax.plot([0, 1, 2, 3], [0, 1, 2, 3])
+
+        canvas = FigureCanvas(figure)
+        width = self.data_panel.get_width()
+        canvas.set_size_request(int(0.9 * width), int(0.9 * width))
+
+        child = self.plot_box.get_first_child()
+        if child:
+            self.plot_box.remove(child)
+        self.plot_box.append(canvas)
 
 
 ###################

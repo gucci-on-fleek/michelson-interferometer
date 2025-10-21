@@ -322,20 +322,21 @@ template $MainWindow: Adw.ApplicationWindow {
                     ]
                 }
 
-                Box value_plot_box {
-                    hexpand: true;
-                    vexpand: true;
+                Label detector_value {
+                    styles [
+                        "monospace",
+                    ]
                 }
 
                 Label {
-                    label: "Mirror Position";
+                    label: "Plot";
 
                     styles [
                         "heading",
                     ]
                 }
 
-                Box position_plot_box {
+                Box plot_box {
                     hexpand: true;
                     vexpand: true;
                 }

@@ -29,10 +29,10 @@ MOTOR_SCALE = (2_000, 13_421.77, 1.374)
 MOTOR_MAX_POS = 50.0  # millimeters
 
 DETECTOR_BAUD = 115_200
-DETECTOR_TIMEOUT = 0.1  # seconds
+DETECTOR_TIMEOUT = 0.05  # seconds
 DETECTOR_NL = "\n"
 
-SLEEP_DURATION = 1 / 2  # seconds
+SLEEP_DURATION = 1 / 10  # seconds
 
 
 ############################
@@ -75,7 +75,7 @@ class Motor:
 
     def home(self) -> None:
         """Homes the motor."""
-        self._device.home(force=True)
+        self._device.home(force=True, sync=False)
 
     @property
     def position(self) -> float:
