@@ -9,6 +9,9 @@
 ###############
 
 from glob import glob
+from typing import Callable
+from threading import Thread
+from time import sleep
 
 from pylablib.core.devio.SCPI import SCPIDevice
 from pylablib.devices.Thorlabs import KinesisMotor
@@ -17,8 +20,8 @@ from pylablib.devices.Thorlabs import KinesisMotor
 ### Constants ###
 #################
 
-MOTOR_DEVICE_GLOB = "/dev/ttyUSB?"
-DETECTOR_DEVICE_GLOB = "/dev/ttyACM?"
+MOTOR_DEVICE_GLOB = "/host-dev/ttyUSB?"
+DETECTOR_DEVICE_GLOB = "/host-dev/ttyACM?"
 
 # For a KBD101/DDSM50 controller, from Thorlabs documentation:
 #     https://www.thorlabs.com/Software/Motion%20Control/APT_Communications_Protocol.pdf
@@ -29,6 +32,25 @@ DETECTOR_BAUD = 115_200
 DETECTOR_TIMEOUT = 0.1  # seconds
 DETECTOR_NL = "\n"
 
+SLEEP_DURATION = 1 / 30  # seconds
+
+
+############################
+### Function Definitions ###
+############################
+
+
+def threaded(func: Callable) -> Callable:
+    """Decorator to run a function in a separate thread."""
+
+    def wrapper(*args, **kwargs):
+        thread = Thread(target=func, args=args, kwargs=kwargs)
+        thread.daemon = True
+        thread.start()
+        return thread
+
+    return wrapper
+
 
 #########################
 ### Class Definitions ###
@@ -38,7 +60,7 @@ DETECTOR_NL = "\n"
 class Motor:
     """Controls the motor that moves the mirror."""
 
-    def __init__(self) -> None:
+    def __init__(self, on_update=None) -> None:
         try:
             path = glob(MOTOR_DEVICE_GLOB)[0]
         except IndexError:
@@ -49,11 +71,13 @@ class Motor:
             scale=MOTOR_SCALE,  # type: ignore[arg-type]
         )
 
+        self.on_update: Callable[[float], None] | None = on_update
+
         self.home()
 
     def home(self) -> None:
         """Homes the motor."""
-        self._device.home(sync=True, force=True)
+        self._device.home(force=True)
 
     @property
     def position(self) -> float:
@@ -64,13 +88,21 @@ class Motor:
     def position(self, value: float) -> None:
         """Sets the position of the mirror in millimeters."""
         self._device.move_to(value)
-        self._device.wait_move()
+        self.update_position()
+
+    @threaded
+    def update_position(self) -> None:
+        """Calls the on_update callback with the current position."""
+        while self._device.is_moving():
+            sleep(SLEEP_DURATION)
+            if self.on_update:
+                self.on_update(self.position)
 
 
 class Detector:
     """Controls the light intensity detector."""
 
-    def __init__(self) -> None:
+    def __init__(self, on_update=None) -> None:
         try:
             path = glob(DETECTOR_DEVICE_GLOB)[0]
         except IndexError:
@@ -82,6 +114,8 @@ class Detector:
             term_write=DETECTOR_NL,
         )
 
+        self.on_update: Callable[[int], None] | None = on_update
+
         assert self._device.get_id()
 
     @property
@@ -90,3 +124,11 @@ class Detector:
         value = self._device.ask("det:meas?", "int")
         assert isinstance(value, int)
         return value
+
+    @threaded
+    def update_value(self) -> None:
+        """Calls the on_update callback with the current intensity."""
+        while True:
+            sleep(SLEEP_DURATION)
+            if self.on_update:
+                self.on_update(self.intensity)

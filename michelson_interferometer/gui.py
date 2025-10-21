@@ -9,6 +9,7 @@
 ###############
 
 import sys
+import threading
 from pathlib import Path
 
 import gi
@@ -19,9 +20,13 @@ from matplotlib.figure import Figure
 
 from . import devices_mock as devices
 
+# from . import devices
+
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gio, GLib, Gtk  # type: ignore
+gi.require_version("GObject", "2.0")
+
+from gi.repository import GObject, Adw, Gio, GLib, Gtk  # type: ignore
 
 #################
 ### Constants ###
@@ -59,6 +64,7 @@ class MainWindow(Adw.ApplicationWindow):
     position_plot_box: Gtk.Box = Gtk.Template.Child()
     position: Adw.SpinRow = Gtk.Template.Child()
     save_as: Gtk.FileDialog = Gtk.Template.Child()
+    step: Adw.SpinRow = Gtk.Template.Child()
     stop_motion_button: Gtk.Button = Gtk.Template.Child()
     value_plot_box: Gtk.Box = Gtk.Template.Child()
 
@@ -75,9 +81,29 @@ class MainWindow(Adw.ApplicationWindow):
         screen = display.get_monitors()[0]
         self.resolution: float = screen.get_scale() * 96  # type: ignore
 
-        self.motor = devices.Motor()
+        self.motor = devices.Motor(
+            on_update=lambda value: GLib.idle_add(self.set_position, value)
+        )
         self.detector = devices.Detector()
         self.current_motion = self.stop_motion_button
+
+        self.position_signal_id = GObject.signal_handler_find(
+            self.position,
+            GObject.SignalMatchType.UNBLOCKED,
+            0,
+            0,
+            None,
+            None,
+            None,
+        )
+
+    def set_position(self, value: float) -> None:
+        with GObject.signal_handler_block(
+            self.position, self.position_signal_id
+        ):
+            print("(Setting value in GUI)")
+            self.position.set_value(value)
+            print("(Done setting value in GUI)")
 
     def draw_plot(self) -> None:
         # TODO!
@@ -133,7 +159,7 @@ class MainWindow(Adw.ApplicationWindow):
     def step_backwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
         current = self.motor.position
-        step = self.position.get_value()
+        step = self.step.get_value()
         self.motor.position = current - step
         self.set_current_motion(self.stop_motion_button)
 
@@ -146,7 +172,7 @@ class MainWindow(Adw.ApplicationWindow):
     def step_forwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
         current = self.motor.position
-        step = self.position.get_value()
+        step = self.step.get_value()
         self.motor.position = current + step
         self.set_current_motion(self.stop_motion_button)
 
