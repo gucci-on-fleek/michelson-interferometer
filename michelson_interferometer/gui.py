@@ -52,7 +52,7 @@ class Application(Adw.Application):
 class MainWindow(Adw.ApplicationWindow):
     __gtype_name__ = "MainWindow"
 
-    about_dialog: Gtk.AboutDialog = Gtk.Template.Child()
+    about_dialog: Adw.AboutDialog = Gtk.Template.Child()
     data_panel: Adw.ToolbarView = Gtk.Template.Child()
     final_position: Adw.SpinRow = Gtk.Template.Child()
     initial_position: Adw.SpinRow = Gtk.Template.Child()
@@ -109,7 +109,7 @@ class MainWindow(Adw.ApplicationWindow):
         print(f"Gain changed to: {value}")  # TODO!
 
     @Gtk.Template.Callback()
-    def home_motor(self, button: Gtk.Button) -> None:  # type: ignore
+    def home_motor(self, button: Adw.ButtonRow) -> None:  # type: ignore
         self.motor.home()
 
     def set_current_motion(self, motion: Gtk.Button) -> None:

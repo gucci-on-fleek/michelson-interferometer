@@ -64,23 +64,10 @@ template $MainWindow: Adw.ApplicationWindow {
                         }
                     }
 
-                    Adw.PreferencesRow {
-                        activatable: false;
-
-                        Button {
-                            clicked => $home_motor();
-                            margin-bottom: 6;
-                            margin-top: 6;
-
-                            styles [
-                                "flat",
-                            ]
-
-                            Adw.ButtonContent {
-                                label: "Home Motor";
-                                icon-name: "go-home-symbolic";
-                            }
-                        }
+                    Adw.ButtonRow {
+                        activated => $home_motor();
+                        title: "Home Motor";
+                        start-icon-name: "go-home-symbolic";
                     }
                 }
 
@@ -372,17 +359,12 @@ FileDialog save_as {
     };
 }
 
-AboutDialog about_dialog {
-    program-name: "Michelson Interferometer";
-
-    authors: [
-        "Max Chernoff",
-    ];
-
+Adw.AboutDialog about_dialog {
+    application-name: "Michelson Interferometer";
+    developer-name: "Max Chernoff";
     version: "0.0";
     license-type: mpl_2_0;
     website: "https://github.com/gucci-on-fleek/michelson-interferometer";
-    website-label: "GitHub Repository";
 }
 
 Adjustment position_adjustment {
