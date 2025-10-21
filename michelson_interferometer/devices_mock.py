@@ -17,7 +17,7 @@ from threading import Thread
 ### Constants ###
 #################
 
-SLEEP_DURATION = 1 / 30  # seconds
+SLEEP_DURATION = 1 / 2  # seconds
 
 
 ############################

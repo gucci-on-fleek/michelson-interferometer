@@ -32,7 +32,7 @@ DETECTOR_BAUD = 115_200
 DETECTOR_TIMEOUT = 0.1  # seconds
 DETECTOR_NL = "\n"
 
-SLEEP_DURATION = 1 / 30  # seconds
+SLEEP_DURATION = 1 / 2  # seconds
 
 
 ############################
