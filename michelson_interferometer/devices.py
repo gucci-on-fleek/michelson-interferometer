@@ -9,7 +9,7 @@
 ###############
 
 from glob import glob
-from typing import Callable
+from typing import Callable, Any
 from threading import Thread
 from time import sleep
 
@@ -40,16 +40,13 @@ SLEEP_DURATION = 1 / 30  # seconds
 ############################
 
 
-def threaded(func: Callable) -> Callable:
-    """Decorator to run a function in a separate thread."""
+def start_thread(func: Callable) -> Thread:
+    """Run a function in a separate thread."""
 
-    def wrapper(*args, **kwargs):
-        thread = Thread(target=func, args=args, kwargs=kwargs)
-        thread.daemon = True
-        thread.start()
-        return thread
-
-    return wrapper
+    thread = Thread(target=func)
+    thread.daemon = True
+    thread.start()
+    return thread
 
 
 #########################
@@ -60,7 +57,7 @@ def threaded(func: Callable) -> Callable:
 class Motor:
     """Controls the motor that moves the mirror."""
 
-    def __init__(self, on_update=None) -> None:
+    def __init__(self, on_update: Callable[[float], Any]) -> None:
         try:
             path = glob(MOTOR_DEVICE_GLOB)[0]
         except IndexError:
@@ -71,7 +68,8 @@ class Motor:
             scale=MOTOR_SCALE,  # type: ignore[arg-type]
         )
 
-        self.on_update: Callable[[float], None] | None = on_update
+        self.on_update = on_update
+        self._thread = start_thread(self._run_thread)
 
         self.home()
 
@@ -88,12 +86,10 @@ class Motor:
     def position(self, value: float) -> None:
         """Sets the position of the mirror in millimeters."""
         self._device.move_to(value)
-        self.update_position()
 
-    @threaded
-    def update_position(self) -> None:
+    def _run_thread(self) -> None:
         """Calls the on_update callback with the current position."""
-        while self._device.is_moving():
+        while True:
             sleep(SLEEP_DURATION)
             if self.on_update:
                 self.on_update(self.position)
@@ -102,7 +98,7 @@ class Motor:
 class Detector:
     """Controls the light intensity detector."""
 
-    def __init__(self, on_update=None) -> None:
+    def __init__(self, on_update: Callable[[int], Any]) -> None:
         try:
             path = glob(DETECTOR_DEVICE_GLOB)[0]
         except IndexError:
@@ -114,7 +110,8 @@ class Detector:
             term_write=DETECTOR_NL,
         )
 
-        self.on_update: Callable[[int], None] | None = on_update
+        self.on_update = on_update
+        self._thread = start_thread(self._run_thread)
 
         assert self._device.get_id()
 
@@ -125,8 +122,7 @@ class Detector:
         assert isinstance(value, int)
         return value
 
-    @threaded
-    def update_value(self) -> None:
+    def _run_thread(self) -> None:
         """Calls the on_update callback with the current intensity."""
         while True:
             sleep(SLEEP_DURATION)

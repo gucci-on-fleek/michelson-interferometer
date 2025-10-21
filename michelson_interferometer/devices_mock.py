@@ -10,7 +10,7 @@
 
 from random import randint
 from time import sleep
-from typing import Callable
+from typing import Callable, Any
 from threading import Thread
 
 #################
@@ -25,16 +25,13 @@ SLEEP_DURATION = 1 / 30  # seconds
 ############################
 
 
-def threaded(func: Callable) -> Callable:
-    """Decorator to run a function in a separate thread."""
+def start_thread(func: Callable) -> Thread:
+    """Run a function in a separate thread."""
 
-    def wrapper(*args, **kwargs):
-        thread = Thread(target=func, args=args, kwargs=kwargs)
-        thread.daemon = True
-        thread.start()
-        return thread
-
-    return wrapper
+    thread = Thread(target=func)
+    thread.daemon = True
+    thread.start()
+    return thread
 
 
 #########################
@@ -45,10 +42,10 @@ def threaded(func: Callable) -> Callable:
 class Motor:
     """Controls the motor that moves the mirror."""
 
-    def __init__(self, on_update=None) -> None:
+    def __init__(self, on_update: Callable[[float], Any]) -> None:
         self.home()
-        self.on_update: Callable[[float], None] | None = on_update
-        self._thread: Thread | None = None
+        self.on_update = on_update
+        self._thread = start_thread(self._run_thread)
 
     def home(self) -> None:
         """Homes the motor."""
@@ -67,11 +64,7 @@ class Motor:
         self._target_position = value
         self._original_position = self._position
 
-        if self._thread is None or not self._thread.is_alive():
-            self._thread = self.update_position()
-
-    @threaded
-    def update_position(self) -> None:
+    def _run_thread(self) -> None:
         """Calls the on_update callback with the current position."""
         while True:
             sleep(SLEEP_DURATION)
@@ -87,26 +80,23 @@ class Motor:
                 print("Motor reached target position.")
                 break
 
-            if self.on_update:
-                self.on_update(self.position)
+            self.on_update(self.position)
 
 
 class Detector:
     """Controls the light intensity detector."""
 
-    def __init__(self, on_update=None) -> None:
-        self.on_update: Callable[[int], None] | None = on_update
-        self._thread = self.update_value()
+    def __init__(self, on_update: Callable[[int], Any]) -> None:
+        self.on_update = on_update
+        self._thread = start_thread(self._run_thread)
 
     @property
     def intensity(self) -> int:
         """Gets the current light intensity reading from the detector."""
         return randint(0, 65535)
 
-    @threaded
-    def update_value(self) -> None:
+    def _run_thread(self) -> None:
         """Calls the on_update callback with the current intensity."""
         while True:
             sleep(SLEEP_DURATION)
-            if self.on_update:
-                self.on_update(self.intensity)
+            self.on_update(self.intensity)

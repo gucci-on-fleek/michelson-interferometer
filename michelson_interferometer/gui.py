@@ -18,9 +18,9 @@ from matplotlib.backends.backend_gtk4agg import (
 )
 from matplotlib.figure import Figure
 
-from . import devices_mock as devices
+# from . import devices_mock as devices
 
-# from . import devices
+from . import devices
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -84,7 +84,9 @@ class MainWindow(Adw.ApplicationWindow):
         self.motor = devices.Motor(
             on_update=lambda value: GLib.idle_add(self.set_position, value)
         )
-        self.detector = devices.Detector()
+        self.detector = devices.Detector(
+            on_update=lambda value: GLib.idle_add(self.update_detector, value)
+        )
         self.current_motion = self.stop_motion_button
 
         self.ignore_position_changes = False
@@ -186,6 +188,9 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def clear_data(self, button: Gtk.Button) -> None:
         print("Clearing data...")  # TODO!
+
+    def update_detector(self, value: int) -> None:
+        print(f"Detector value: {value}")  # TODO!
 
 
 ###################
