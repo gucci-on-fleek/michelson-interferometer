@@ -153,6 +153,26 @@ template $MainWindow: Adw.ApplicationWindow {
                         }
                     }
 
+                    Adw.SpinRow speed {
+                        title: "Speed";
+                        snap-to-ticks: true;
+
+                        adjustment: Adjustment {
+                            lower: 0;
+                            upper: 10;
+                            value: 1;
+                            step-increment: 0.010;
+                            page-increment: 1;
+                        };
+
+                        digits: 3;
+
+                        [suffix]
+                        Label {
+                            label: " mm/s";
+                        }
+                    }
+
                     Adw.PreferencesRow {
                         activatable: false;
 

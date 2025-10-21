@@ -95,6 +95,7 @@ class MainWindow(Adw.ApplicationWindow):
     save_as: Gtk.FileDialog = Gtk.Template.Child()
     step: Adw.SpinRow = Gtk.Template.Child()
     stop_motion_button: Gtk.Button = Gtk.Template.Child()
+    speed: Adw.SpinRow = Gtk.Template.Child()
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -129,6 +130,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.motion_thread: Thread | None = None
         self.motion_should_stop = False
 
+        # self.default_jog = None
     def set_position(self, value: float) -> None:
         self.ignore_position_changes = True
         self.position.set_value(value)
@@ -167,7 +169,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.motion_thread = start_thread(
             self.do_motion,
             self.initial_position.get_value(),
-            -self.step.get_value(),
+            -self.speed.get_value(),
         )
 
     @Gtk.Template.Callback()
@@ -181,6 +183,12 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def stop_motion(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
+        # if self.default_jog:
+        sleep(0.1)
+        self.motor._device.setup_jog(min_velocity=0, max_velocity=100)
+        sleep(0.1)
+        self.motor._device.setup_velocity(min_velocity=0, max_velocity=100, scale=True)
+        sleep(0.1)
         if self.motion_thread and self.motion_thread.is_alive():
             self.motion_should_stop = True
             self.motion_thread.join()
@@ -202,7 +210,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.motion_thread = start_thread(
             self.do_motion,
             self.final_position.get_value(),
-            self.step.get_value(),
+            self.speed.get_value(),
         )
 
     @Gtk.Template.Callback()
@@ -258,23 +266,28 @@ class MainWindow(Adw.ApplicationWindow):
                 dpi=self.resolution,
             )
             figure.subplots_adjust(bottom=0.20, left=0.20)
-            ax = figure.add_subplot()
+            ax1 = figure.add_subplot()
+            ax2 = ax1.twinx()
 
-            ax.set_xlabel("Time (s)")
+            ax1.set_xlabel("Time (s)")
+            ax1.set_ylabel("Intensity")
+            ax2.set_xlabel("Time (s)")
+            ax2.set_ylabel("Position (mm)")
+            ax2.grid(visible=False)
 
             detector = np.array(self.detector.data)
             motor = np.array(self.motor.data)
             try:
-                ax.plot(
+                ax1.plot(
                     detector[:, 0] - detector[0, 0],
                     detector[:, 1],
-                    ".",
+                    ".C0",
                     label="Detector",
                 )
-                ax.plot(
+                ax2.plot(
                     motor[:, 0] - motor[0, 0],
                     motor[:, 1],
-                    ".",
+                    ".C1",
                     label="Mirror",
                 )
             except IndexError:
@@ -295,14 +308,19 @@ class MainWindow(Adw.ApplicationWindow):
         self.plot_width = self.data_panel.get_width()
         self.plot_height = self.data_panel.get_height() - 200
 
-    def do_motion(self, end: float, step: float) -> None:
-        position = self.motor.position
-        while (step > 0 and position < end) or (step < 0 and position > end):
-            if self.motion_should_stop:
-                break
-            position += step
-            self.motor.position = position
-            self.motor.wait()
+    def do_motion(self, end: float, speed: float) -> None:
+        # if self.default_jog is None:
+        #     self.default_jog = self.motor._device.get_jog_parameters()
+
+        sleep(0.1)
+        self.motor._device.setup_jog(min_velocity=abs(speed), max_velocity=abs(speed), scale=True)
+        sleep(0.1)
+        print("!!!", speed)
+        # self.motor._device.setup_drive(velocity=speed)
+        self.motor._device.setup_velocity(min_velocity=abs(speed), max_velocity=abs(speed), scale=True)
+        sleep(0.1)
+        self.motor._device.jog("+" if speed < 0 else "-", kind="continuous")
+        # self.motor.wait()
 
         GLib.idle_add(self.set_current_motion, self.stop_motion_button)
 
