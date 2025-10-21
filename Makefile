@@ -9,6 +9,7 @@ MAKEFLAGS += --no-builtin-rules
 .SILENT:
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
+SHELL := /usr/bin/bash
 
 # Variables
 PYTHON := $(shell type -p python3)
