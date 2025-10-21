@@ -372,12 +372,17 @@ FileDialog save_as {
     };
 }
 
-Adw.AboutDialog about_dialog {
-    application-name: "Michelson Interferometer";
-    developer-name: "Max Chernoff";
+AboutDialog about_dialog {
+    program-name: "Michelson Interferometer";
+
+    authors: [
+        "Max Chernoff",
+    ];
+
     version: "0.0";
     license-type: mpl_2_0;
     website: "https://github.com/gucci-on-fleek/michelson-interferometer";
+    website-label: "GitHub Repository";
 }
 
 Adjustment position_adjustment {

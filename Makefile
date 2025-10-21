@@ -40,7 +40,7 @@ setup: .venv/bin/activate ;
 appimage: Michelson_Interferometer-x86_64.AppImage
 
 Michelson_Interferometer-x86_64.AppImage: AppImageBuilder.yml michelson_interferometer/main.ui michelson_interferometer/*.py build-appimage.sh
-	podman run --pull=newer --rm --volume=$$(pwd):/srv/:Z docker.io/library/ubuntu:jammy /srv/build-appimage.sh
+	podman run --pull=newer --rm --volume=$$(pwd):/srv/:Z docker.io/library/ubuntu:noble /srv/build-appimage.sh
 
 # Run the GUI
 .PHONY: run
