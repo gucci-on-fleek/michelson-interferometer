@@ -83,6 +83,10 @@ class Motor:
         """Stops the motor."""
         self._device.stop()
 
+    def wait(self) -> None:
+        """Waits for the motor to finish any current movement."""
+        self._device.wait_for_stop()
+
     @property
     def position(self) -> float:
         """Gets the current position of the mirror in millimeters."""
@@ -133,6 +137,7 @@ class Detector:
     def gain(self, value: int) -> None:
         """Sets the position of the mirror in millimeters."""
         self._device.write(f"det:gain {value}")
+        sleep(0.1)  # Give the detector time to adjust, hack!
 
     @property
     def intensity(self) -> int:

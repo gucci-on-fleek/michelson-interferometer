@@ -57,10 +57,10 @@ TSV_HEADER = (
 ############################
 
 
-def start_thread(func: Callable) -> Thread:
+def start_thread(func: Callable, *args) -> Thread:
     """Run a function in a separate thread."""
 
-    thread = Thread(target=func)
+    thread = Thread(target=func, args=args)
     thread.daemon = True
     thread.start()
     return thread
@@ -127,6 +127,9 @@ class MainWindow(Adw.ApplicationWindow):
 
         start_thread(self.draw_plot)
 
+        self.motion_thread: Thread | None = None
+        self.motion_should_stop = False
+
     def set_position(self, value: float) -> None:
         self.ignore_position_changes = True
         self.position.set_value(value)
@@ -162,7 +165,11 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def run_backwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        print("Running backwards...")  # TODO!
+        start_thread(
+            self.do_motion,
+            self.initial_position.get_value(),
+            self.step.get_value(),
+        )
 
     @Gtk.Template.Callback()
     def step_backwards(self, button: Gtk.Button) -> None:
@@ -175,6 +182,11 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def stop_motion(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
+        if self.motion_thread and self.motion_thread.is_alive():
+            self.motion_should_stop = True
+            self.motion_thread.join()
+            self.motion_should_stop = False
+
         self.motor.stop()
 
     @Gtk.Template.Callback()
@@ -188,7 +200,11 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def run_forwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        print("Running forwards...")  # TODO!
+        start_thread(
+            self.do_motion,
+            self.final_position.get_value(),
+            self.step.get_value(),
+        )
 
     @Gtk.Template.Callback()
     def go_to_final(self, button: Gtk.Button) -> None:
@@ -279,6 +295,15 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.plot_width = self.data_panel.get_width()
         self.plot_height = self.data_panel.get_height() - 200
+
+    def do_motion(self, end: float, step: float) -> None:
+        position = self.motor.position
+        while position <= end:
+            if self.motion_should_stop:
+                break
+            position += step
+            self.motor.position = position
+            self.motor.wait()
 
 
 ###################

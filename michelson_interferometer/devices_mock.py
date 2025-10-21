@@ -58,6 +58,11 @@ class Motor:
         """Stops the motor."""
         print("Stopping motor...")
 
+    def wait(self) -> None:
+        """Waits for the motor to finish any current movement."""
+        print("Waiting for motor to stop...")
+        sleep(0.2)
+
     @property
     def position(self) -> float:
         """Gets the current position of the mirror in millimeters."""
