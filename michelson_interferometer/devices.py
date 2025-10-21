@@ -9,7 +9,7 @@
 ###############
 
 from glob import glob
-from threading import Thread
+from threading import Thread, Lock
 from time import sleep
 from time import time as unix_time
 from typing import Any, Callable
@@ -72,6 +72,7 @@ class Motor:
         self.on_update = on_update
         self.data: list[tuple[float, float]] = []
         self._thread = start_thread(self._run_thread)
+        self._lock = Lock()
 
         self.home()
 
@@ -90,12 +91,14 @@ class Motor:
     @property
     def position(self) -> float:
         """Gets the current position of the mirror in millimeters."""
-        return self._device.get_position()
+        with self._lock:
+            return self._device.get_position()
 
     @position.setter
     def position(self, value: float) -> None:
         """Sets the position of the mirror in millimeters."""
-        self._device.move_to(value)
+        with self._lock:
+            self._device.move_to(value)
 
     def _run_thread(self) -> None:
         """Calls the on_update callback with the current position."""
