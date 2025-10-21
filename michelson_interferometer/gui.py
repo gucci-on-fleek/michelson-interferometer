@@ -87,23 +87,12 @@ class MainWindow(Adw.ApplicationWindow):
         self.detector = devices.Detector()
         self.current_motion = self.stop_motion_button
 
-        self.position_signal_id = GObject.signal_handler_find(
-            self.position,
-            GObject.SignalMatchType.UNBLOCKED,
-            0,
-            0,
-            None,
-            None,
-            None,
-        )
+        self.ignore_position_changes = False
 
     def set_position(self, value: float) -> None:
-        with GObject.signal_handler_block(
-            self.position, self.position_signal_id
-        ):
-            print("(Setting value in GUI)")
-            self.position.set_value(value)
-            print("(Done setting value in GUI)")
+        self.ignore_position_changes = True
+        self.position.set_value(value)
+        self.ignore_position_changes = False
 
     def draw_plot(self) -> None:
         # TODO!
@@ -126,8 +115,9 @@ class MainWindow(Adw.ApplicationWindow):
 
     @Gtk.Template.Callback()
     def position_changed(self, spinner: Adw.SpinRow) -> None:
-        value = spinner.get_value()
-        self.motor.position = value
+        if not self.ignore_position_changes:
+            value = spinner.get_value()
+            self.motor.position = value
 
     @Gtk.Template.Callback()
     def gain_changed(self, spinner: Adw.SpinRow) -> None:
