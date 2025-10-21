@@ -9,9 +9,10 @@
 ###############
 
 from glob import glob
-from typing import Callable, Any
 from threading import Thread
 from time import sleep
+from time import time as unix_time
+from typing import Any, Callable
 
 from pylablib.core.devio.SCPI import SCPIDevice
 from pylablib.devices.Thorlabs import KinesisMotor
@@ -69,6 +70,7 @@ class Motor:
         )
 
         self.on_update = on_update
+        self.data: list[tuple[float, float]] = []
         self._thread = start_thread(self._run_thread)
 
         self.home()
@@ -76,6 +78,10 @@ class Motor:
     def home(self) -> None:
         """Homes the motor."""
         self._device.home(force=True, sync=False)
+
+    def stop(self) -> None:
+        """Stops the motor."""
+        self._device.stop()
 
     @property
     def position(self) -> float:
@@ -91,8 +97,8 @@ class Motor:
         """Calls the on_update callback with the current position."""
         while True:
             sleep(SLEEP_DURATION)
-            if self.on_update:
-                self.on_update(self.position)
+            self.data.append((unix_time(), self.position))
+            self.on_update(self.position)
 
 
 class Detector:
@@ -111,9 +117,22 @@ class Detector:
         )
 
         self.on_update = on_update
+        self.data: list[tuple[float, int]] = []
         self._thread = start_thread(self._run_thread)
 
         assert self._device.get_id()
+
+    @property
+    def gain(self) -> int:
+        """Gets the current position of the mirror in millimeters."""
+        value = self._device.ask("det:gain?", "int")
+        assert isinstance(value, int)
+        return value
+
+    @gain.setter
+    def gain(self, value: int) -> None:
+        """Sets the position of the mirror in millimeters."""
+        self._device.write(f"det:gain {value}")
 
     @property
     def intensity(self) -> int:
@@ -126,5 +145,5 @@ class Detector:
         """Calls the on_update callback with the current intensity."""
         while True:
             sleep(SLEEP_DURATION)
-            if self.on_update:
-                self.on_update(self.intensity)
+            self.data.append((unix_time(), self.intensity))
+            self.on_update(self.intensity)

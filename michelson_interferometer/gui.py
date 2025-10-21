@@ -9,10 +9,17 @@
 ###############
 
 import sys
-import threading
+from csv import excel_tab
+from csv import writer as csv_writer
 from pathlib import Path
+from threading import Thread
+from time import sleep
+from time import time as unix_time
+from typing import Callable
 
 import gi
+import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.backends.backend_gtk4agg import (
     FigureCanvasGTK4Agg as FigureCanvas,
 )
@@ -26,7 +33,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("GObject", "2.0")
 
-from gi.repository import GObject, Adw, Gio, GLib, Gtk  # type: ignore
+from gi.repository import Adw, Gio, GLib, GObject, Gtk  # type: ignore
 
 #################
 ### Constants ###
@@ -36,6 +43,27 @@ APP_NAME = "Michelson Interferometer"
 APP_ID = "ca.maxchernoff.michelson_interferometer"
 
 UI_PATH = Path(__file__).parent
+PLOT_UPDATE_INTERVAL = 1  # seconds
+TSV_HEADER = (
+    "motor_time",
+    "motor_position",
+    "detector_time",
+    "detector_intensity",
+)
+
+
+############################
+### Function Definitions ###
+############################
+
+
+def start_thread(func: Callable) -> Thread:
+    """Run a function in a separate thread."""
+
+    thread = Thread(target=func)
+    thread.daemon = True
+    thread.start()
+    return thread
 
 
 #########################
@@ -61,6 +89,7 @@ class MainWindow(Adw.ApplicationWindow):
     data_panel: Adw.ToolbarView = Gtk.Template.Child()
     detector_value: Gtk.Label = Gtk.Template.Child()
     final_position: Adw.SpinRow = Gtk.Template.Child()
+    gain: Adw.SpinRow = Gtk.Template.Child()
     initial_position: Adw.SpinRow = Gtk.Template.Child()
     plot_box: Gtk.Box = Gtk.Template.Child()
     position: Adw.SpinRow = Gtk.Template.Child()
@@ -91,6 +120,13 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.ignore_position_changes = False
 
+        self.plot_width = 200
+        self.plot_height = 200
+
+        self.gain_changed(self.gain)
+
+        start_thread(self.draw_plot)
+
     def set_position(self, value: float) -> None:
         self.ignore_position_changes = True
         self.position.set_value(value)
@@ -105,7 +141,7 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def gain_changed(self, spinner: Adw.SpinRow) -> None:
         value = spinner.get_value()
-        print(f"Gain changed to: {value}")  # TODO!
+        self.detector.gain = int(value)
 
     @Gtk.Template.Callback()
     def home_motor(self, button: Adw.ButtonRow) -> None:  # type: ignore
@@ -139,7 +175,7 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def stop_motion(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        print("Stopping motion...")  # TODO!
+        self.motor.stop()
 
     @Gtk.Template.Callback()
     def step_forwards(self, button: Gtk.Button) -> None:
@@ -163,34 +199,86 @@ class MainWindow(Adw.ApplicationWindow):
 
     @Gtk.Template.Callback()
     def save_data(self, button: Adw.SplitButton) -> None:
-        self.save_as.open()
-        print("Saving data...")  # TODO!
+        self.save_as.save(callback=self.on_save_dialog_response)
+
+    def on_save_dialog_response(
+        self, dialog: Gtk.FileDialog, task: Gio.Task
+    ) -> None:
+        file = dialog.save_finish(task)
+        if file is None:
+            return
+        path = Path(file.get_path()).with_suffix(".tsv")  # type: ignore
+        with path.open("w") as f:
+            writer = csv_writer(f, dialect=excel_tab)
+            writer.writerow(TSV_HEADER)
+            for (motor_time, motor_position), (
+                detector_time,
+                detector_intensity,
+            ) in zip(self.motor.data, self.detector.data):
+                writer.writerow(
+                    (
+                        motor_time,
+                        motor_position,
+                        detector_time,
+                        detector_intensity,
+                    )
+                )
 
     @Gtk.Template.Callback()
     def clear_data(self, button: Gtk.Button) -> None:
-        print("Clearing data...")  # TODO!
+        self.motor.data.clear()
+        self.detector.data.clear()
 
     def update_detector(self, value: int) -> None:
         self.detector_value.set_label(f"{value}")
 
     def draw_plot(self) -> None:
-        # TODO!
-        figure = Figure(figsize=(1, 1), dpi=self.resolution)
-        ax = figure.add_subplot()
+        while True:
+            sleep(PLOT_UPDATE_INTERVAL)
+            figure = Figure(
+                figsize=(
+                    10 * self.plot_width / self.resolution,
+                    10 * self.plot_height / self.resolution,
+                ),
+                dpi=self.resolution,
+            )
+            figure.subplots_adjust(bottom=0.20, left=0.20)
+            ax = figure.add_subplot()
 
-        ax.set_title("Interferometer Value")
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Value (arb. units)")
-        ax.plot([0, 1, 2, 3], [0, 1, 2, 3])
+            ax.set_xlabel("Time (s)")
 
-        canvas = FigureCanvas(figure)
-        width = self.data_panel.get_width()
-        canvas.set_size_request(int(0.9 * width), int(0.9 * width))
+            detector = np.array(self.detector.data)
+            motor = np.array(self.motor.data)
+            try:
+                ax.plot(
+                    detector[:, 0] - detector[0, 0],
+                    detector[:, 1],
+                    ".",
+                    label="Detector",
+                )
+                ax.plot(
+                    motor[:, 0] - motor[0, 0],
+                    motor[:, 1],
+                    ".",
+                    label="Mirror",
+                )
+            except IndexError:
+                continue
+            figure.legend(loc="outside upper right")
 
+            GLib.idle_add(self.render_plot, FigureCanvas(figure))
+
+    def render_plot(self, canvas: FigureCanvas) -> None:
+        canvas.set_size_request(
+            int(0.9 * self.plot_width), int(0.9 * self.plot_height)
+        )
         child = self.plot_box.get_first_child()
         if child:
             self.plot_box.remove(child)
         self.plot_box.append(canvas)
+
+        self.plot_width = self.data_panel.get_width()
+        self.plot_height = self.data_panel.get_height() - 200
 
 
 ###################
@@ -198,7 +286,18 @@ class MainWindow(Adw.ApplicationWindow):
 ###################
 
 
+def configure_matplotlib() -> None:
+    plt.rcParams["font.family"] = "STIXGeneral"
+    plt.rcParams["mathtext.fontset"] = "stix"
+    plt.rcParams["font.size"] = 10
+
+    # Enable the grid
+    plt.rcParams["axes.grid"] = True
+    plt.rcParams["axes.grid.which"] = "major"
+
+
 def main() -> None:
+    configure_matplotlib()
     appplication = Application()
     appplication.run(sys.argv)
 

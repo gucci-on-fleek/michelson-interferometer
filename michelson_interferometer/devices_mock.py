@@ -9,9 +9,10 @@
 ###############
 
 from random import randint
-from time import sleep
-from typing import Callable, Any
 from threading import Thread
+from time import sleep
+from time import time as unix_time
+from typing import Any, Callable
 
 #################
 ### Constants ###
@@ -45,12 +46,17 @@ class Motor:
     def __init__(self, on_update: Callable[[float], Any]) -> None:
         self.home()
         self.on_update = on_update
+        self.data: list[tuple[float, float]] = []
         self._thread = start_thread(self._run_thread)
 
     def home(self) -> None:
         """Homes the motor."""
         print("Homing motor...")
         self._position = 0.0
+
+    def stop(self) -> None:
+        """Stops the motor."""
+        print("Stopping motor...")
 
     @property
     def position(self) -> float:
@@ -60,26 +66,13 @@ class Motor:
     @position.setter
     def position(self, value: float) -> None:
         """Sets the position of the mirror in millimeters."""
-        print(f"Setting motor position to {value} mm")
-        self._target_position = value
-        self._original_position = self._position
+        self._position = value
 
     def _run_thread(self) -> None:
         """Calls the on_update callback with the current position."""
         while True:
             sleep(SLEEP_DURATION)
-            if self._position < self._target_position:
-                self._position += min(
-                    0.1, self._target_position - self._position
-                )
-            elif self._position > self._target_position:
-                self._position -= min(
-                    0.1, self._position - self._target_position
-                )
-            else:
-                print("Motor reached target position.")
-                break
-
+            self.data.append((unix_time(), self.position))
             self.on_update(self.position)
 
 
@@ -88,7 +81,19 @@ class Detector:
 
     def __init__(self, on_update: Callable[[int], Any]) -> None:
         self.on_update = on_update
+        self.data: list[tuple[float, int]] = []
         self._thread = start_thread(self._run_thread)
+
+    @property
+    def gain(self) -> int:
+        """Gets the current position of the mirror in millimeters."""
+        print("Getting gain...")
+        return 1
+
+    @gain.setter
+    def gain(self, value: int) -> None:
+        """Sets the position of the mirror in millimeters."""
+        print(f"Setting gain to: {value}")
 
     @property
     def intensity(self) -> int:
@@ -99,4 +104,5 @@ class Detector:
         """Calls the on_update callback with the current intensity."""
         while True:
             sleep(SLEEP_DURATION)
+            self.data.append((unix_time(), self.intensity))
             self.on_update(self.intensity)

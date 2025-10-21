@@ -74,7 +74,7 @@ template $MainWindow: Adw.ApplicationWindow {
                 Adw.PreferencesGroup {
                     title: "Detector Settings";
 
-                    Adw.SpinRow {
+                    Adw.SpinRow gain {
                         changed => $gain_changed();
                         digits: 0;
                         snap-to-ticks: true;
