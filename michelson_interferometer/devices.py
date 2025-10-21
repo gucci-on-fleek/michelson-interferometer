@@ -78,15 +78,18 @@ class Motor:
 
     def home(self) -> None:
         """Homes the motor."""
-        self._device.home(force=True, sync=False)
+        with self._lock:
+            self._device.home(force=True, sync=False)
 
     def stop(self) -> None:
         """Stops the motor."""
-        self._device.stop()
+        with self._lock:
+            self._device.stop()
 
     def wait(self) -> None:
         """Waits for the motor to finish any current movement."""
-        self._device.wait_for_stop()
+        with self._lock:
+            self._device.wait_for_stop()
 
     @property
     def position(self) -> float:
@@ -99,6 +102,7 @@ class Motor:
         """Sets the position of the mirror in millimeters."""
         with self._lock:
             self._device.move_to(value)
+            sleep(SLEEP_DURATION / 2)
 
     def _run_thread(self) -> None:
         """Calls the on_update callback with the current position."""
