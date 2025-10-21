@@ -12,7 +12,7 @@ MAKEFLAGS += --no-builtin-rules
 SHELL := /usr/bin/bash
 
 # Variables
-PYTHON := $(shell type -p python3)
+VENV := python3 -m venv
 
 # Default target
 .DEFAULT_GOAL := default
@@ -25,7 +25,7 @@ default:
 setup: .venv/bin/activate ;
 
 .venv/bin/activate: pyproject.toml
-	${PYTHON} -m venv ./.venv
+	${VENV} ./.venv
 	pip3 install --upgrade pip
 	source ./.venv/bin/activate
 	pip3 install .
