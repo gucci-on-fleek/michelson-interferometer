@@ -20,8 +20,8 @@ from pylablib.devices.Thorlabs import KinesisMotor
 ### Constants ###
 #################
 
-MOTOR_DEVICE_GLOB = "/host-dev/ttyUSB?"
-DETECTOR_DEVICE_GLOB = "/host-dev/ttyACM?"
+MOTOR_DEVICE_GLOB = "/dev/ttyUSB?"
+DETECTOR_DEVICE_GLOB = "/dev/ttyACM?"
 
 # For a KBD101/DDSM50 controller, from Thorlabs documentation:
 #     https://www.thorlabs.com/Software/Motion%20Control/APT_Communications_Protocol.pdf
