@@ -168,7 +168,7 @@ class MainWindow(Adw.ApplicationWindow):
         start_thread(
             self.do_motion,
             self.initial_position.get_value(),
-            self.step.get_value(),
+            -self.step.get_value(),
         )
 
     @Gtk.Template.Callback()
@@ -298,7 +298,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def do_motion(self, end: float, step: float) -> None:
         position = self.motor.position
-        while position <= end:
+        while (step > 0 and position < end) or (step < 0 and position > end):
             if self.motion_should_stop:
                 break
             position += step
