@@ -31,9 +31,8 @@ from . import devices
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-gi.require_version("GObject", "2.0")
 
-from gi.repository import Adw, Gio, GLib, GObject, Gtk  # type: ignore
+from gi.repository import Adw, Gio, GLib, Gtk  # type: ignore
 
 #################
 ### Constants ###
@@ -165,7 +164,7 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def run_backwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        start_thread(
+        self.motion_thread = start_thread(
             self.do_motion,
             self.initial_position.get_value(),
             -self.step.get_value(),
@@ -200,7 +199,7 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def run_forwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        start_thread(
+        self.motion_thread = start_thread(
             self.do_motion,
             self.final_position.get_value(),
             self.step.get_value(),
