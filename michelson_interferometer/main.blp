@@ -64,10 +64,23 @@ template $MainWindow: Adw.ApplicationWindow {
                         }
                     }
 
-                    Adw.ButtonRow {
-                        activated => $home_motor();
-                        title: "Home Motor";
-                        start-icon-name: "go-home-symbolic";
+                    Adw.PreferencesRow {
+                        activatable: false;
+
+                        Button {
+                            clicked => $home_motor();
+                            margin-bottom: 6;
+                            margin-top: 6;
+
+                            styles [
+                                "flat",
+                            ]
+
+                            Adw.ButtonContent {
+                                label: "Home Motor";
+                                icon-name: "go-home-symbolic";
+                            }
+                        }
                     }
                 }
 

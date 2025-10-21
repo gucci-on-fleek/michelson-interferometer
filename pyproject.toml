@@ -10,14 +10,15 @@ authors = [{ name = "Max Chernoff" }]
 version = "0"
 
 dependencies = [
-    "pylablib-lightweight[extra, devio] ~= 1.4",
-    "PyGObject ~= 3.50",
-    "pycairo ~= 1.25",
     "matplotlib ~= 3.10",
+    "pycairo ~= 1.11",
+    "PyGObject ~= 3.42",
+    "pylablib-lightweight[extra, devio] ~= 1.4",
 ]
 
 [build-system]
 requires = ["pygobject-stubs ~= 2.13", "setuptools >= 40.8"]
+build-backend = "setuptools.build_meta"
 
 
 [tool.black]
@@ -26,9 +27,15 @@ target-version = ["py313"]
 preview = true
 
 
-[tool.setuptools]
-py-modules = ["michelson_interferometer"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["michelson_interferometer"]
+namespaces = false
+
+
+[tool.setuptools.package-data]
+michelson_interferometer = ["*.ui"]
 
 
 [project.scripts]
-michelson-interferometer = "michelson_interferometer:main"
+michelson-interferometer = "michelson_interferometer:gui.main"

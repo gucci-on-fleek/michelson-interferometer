@@ -8,7 +8,6 @@
 ### Imports ###
 ###############
 
-import asyncio
 import sys
 from pathlib import Path
 
@@ -22,7 +21,6 @@ from . import devices_mock as devices
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.events import GLibEventLoopPolicy  # type: ignore
 from gi.repository import Adw, Gio, GLib, Gtk  # type: ignore
 
 #################
@@ -111,7 +109,7 @@ class MainWindow(Adw.ApplicationWindow):
         print(f"Gain changed to: {value}")  # TODO!
 
     @Gtk.Template.Callback()
-    def home_motor(self, button: Adw.ButtonRow) -> None:  # type: ignore
+    def home_motor(self, button: Gtk.Button) -> None:  # type: ignore
         self.motor.home()
 
     def set_current_motion(self, motion: Gtk.Button) -> None:
@@ -178,8 +176,11 @@ class MainWindow(Adw.ApplicationWindow):
 ### Entry Point ###
 ###################
 
-if __name__ == "__main__":
-    asyncio.set_event_loop_policy(GLibEventLoopPolicy())
 
+def main() -> None:
     appplication = Application()
     appplication.run(sys.argv)
+
+
+if __name__ == "__main__":
+    main()
