@@ -305,6 +305,8 @@ class MainWindow(Adw.ApplicationWindow):
             self.motor.position = position
             self.motor.wait()
 
+        GLib.idle_add(self.set_current_motion, self.stop_motion_button)
+
 
 ###################
 ### Entry Point ###
