@@ -3,14 +3,16 @@ runtime: org.gnome.Platform
 runtime-version: "48"
 sdk: org.gnome.Sdk
 
-command: python3
-
-buildsystem: simple
-build-commands:
-  - pip3 install --prefix=/app --no-deps .
+command: /usr/bin/python3.12
 
 modules:
-  - python3-modules.json
+  - name: python3
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-build-isolation --no-deps . ./wheels/*
+    sources:
+      - type: dir
+        path: ..
 
 finish-args:
   # X11

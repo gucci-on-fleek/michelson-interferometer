@@ -22,13 +22,14 @@ default:
 
 # Create the venv and install dependencies
 .PHONY: setup
-setup: .venv/bin/activate ;
+setup: .venv/bin/activate
+	flatpak --user install org.gnome.Sdk//48
 
 .venv/bin/activate: pyproject.toml
 	${VENV} ./.venv
 	pip3 install --upgrade pip
 	source ./.venv/bin/activate
-	pip3 install .
+	pip3 install .[dev,gtk]
 	touch ./.venv/bin/activate
 
 # Build the GUI files
@@ -37,17 +38,20 @@ setup: .venv/bin/activate ;
 
 # Flatpak pip generator
 flatpak/flatpak-pip-generator.py: setup
-	wget 'https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/main/pip/flatpak-pip-generator.py' -O $@
+	wget 'https://github.com/flatpak/flatpak-builder-tools/raw/refs/heads/master/pip/flatpak-pip-generator.py' -O $@
 	chmod +x $@
-
-flatpak/python3-modules.json: pyproject.toml flatpak/flatpak-pip-generator.py setup
-	source ./.venv/bin/activate
-	./flatpak/flatpak-pip-generator.py --output=$@ --pyproject-file=pyproject.toml --runtime=org.gnome.Platform//48
 
 # Flatpak build
 .PHONY: flatpak
-flatpak: flatpak/ca.maxchernoff.michelson_interferometer.yaml michelson_interferometer/main.ui michelson_interferometer/*.py pyproject.toml
-	flatpak-builder --user --install-deps-from=flathub --repo=repo --install builddir org.flatpak.Hello.yml
+flatpak: ca.maxchernoff.michelson_interferometer.oci.tar ;
+
+ca.maxchernoff.michelson_interferometer.oci.tar: flatpak/ca.maxchernoff.michelson_interferometer.yaml michelson_interferometer/main.ui michelson_interferometer/*.py pyproject.toml
+	source ./.venv/bin/activate
+	flatpak --user run --devel --share=network --filesystem=host --command=pip3 org.gnome.Sdk//48 download --only-binary=":all:" --no-binary="pyft232" --no-build-isolation --dest=./wheels/ .
+	flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+	flatpak-builder --user --install-deps-from=flathub --repo=repo --install --ccache --force-clean ./build/ $<
+	flatpak build-bundle --oci ./repo ca.maxchernoff.michelson_interferometer.oci ca.maxchernoff.michelson_interferometer
+	skopeo copy oci:./ca.maxchernoff.michelson_interferometer.oci oci-archive:./ca.maxchernoff.michelson_interferometer.oci.tar
 
 # Run the GUI
 .PHONY: run

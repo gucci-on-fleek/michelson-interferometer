@@ -11,17 +11,15 @@ version = "0"
 
 dependencies = [
     "matplotlib ~= 3.10",
-    "pycairo ~= 1.11",
-    "PyGObject ~= 3.42",
     "pylablib-lightweight[extra, devio] ~= 1.4",
 ]
 
+[project.optional-dependencies]
+dev = ["pygobject-stubs ~= 2.0"]
+gtk = ["pycairo == 1.28.0", "PyGObject == 3.52.3"]
+
 [build-system]
-requires = [
-    "pygobject-stubs ~= 2.13",
-    "setuptools >= 40.8",
-    "git+https://github.com/flatpak/flatpak-builder-tools.git#egg=flatpak_pip_generator&subdirectory=pip",
-]
+requires = ["setuptools == 80.9.0"]
 build-backend = "setuptools.build_meta"
 
 
