@@ -35,6 +35,20 @@ setup: .venv/bin/activate ;
 %.ui: %.blp
 	blueprint-compiler compile $< --output $@
 
+# Flatpak pip generator
+flatpak/flatpak-pip-generator.py: setup
+	wget 'https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/main/pip/flatpak-pip-generator.py' -O $@
+	chmod +x $@
+
+flatpak/python3-modules.json: pyproject.toml flatpak/flatpak-pip-generator.py setup
+	source ./.venv/bin/activate
+	./flatpak/flatpak-pip-generator.py --output=$@ --pyproject-file=pyproject.toml --runtime=org.gnome.Platform//48
+
+# Flatpak build
+.PHONY: flatpak
+flatpak: flatpak/ca.maxchernoff.michelson_interferometer.yaml michelson_interferometer/main.ui michelson_interferometer/*.py pyproject.toml
+	flatpak-builder --user --install-deps-from=flathub --repo=repo --install builddir org.flatpak.Hello.yml
+
 # Run the GUI
 .PHONY: run
 run: setup michelson_interferometer/main.ui michelson_interferometer/*.py

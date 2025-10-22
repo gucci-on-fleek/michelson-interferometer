@@ -1,0 +1,27 @@
+id: ca.maxchernoff.michelson_interferometer
+runtime: org.gnome.Platform
+runtime-version: "48"
+sdk: org.gnome.Sdk
+
+command: python3
+
+buildsystem: simple
+build-commands:
+  - pip3 install --prefix=/app --no-deps .
+
+modules:
+  - python3-modules.json
+
+finish-args:
+  # X11
+  - --share=ipc
+  - --socket=fallback-x11
+  # Wayland
+  - --socket=wayland
+  # GPU acceleration
+  - --device=dri
+  # Access to home directory
+  - --filesystem=home
+  # Access to all devices
+  - --device=all
+

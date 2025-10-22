@@ -17,7 +17,11 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["pygobject-stubs ~= 2.13", "setuptools >= 40.8"]
+requires = [
+    "pygobject-stubs ~= 2.13",
+    "setuptools >= 40.8",
+    "git+https://github.com/flatpak/flatpak-builder-tools.git#egg=flatpak_pip_generator&subdirectory=pip",
+]
 build-backend = "setuptools.build_meta"
 
 

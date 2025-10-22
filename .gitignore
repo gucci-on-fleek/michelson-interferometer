@@ -12,3 +12,5 @@ AppDir/
 appimage-build/
 build/
 data/
+flatpak/flatpak-pip-generator.py
+flatpak/python3-modules.json
