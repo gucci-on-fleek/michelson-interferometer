@@ -43,15 +43,14 @@ flatpak/flatpak-pip-generator.py: setup
 
 # Flatpak build
 .PHONY: flatpak
-flatpak: ca.maxchernoff.michelson_interferometer.oci.tar ;
+flatpak: ca.maxchernoff.michelson_interferometer.flatpak ;
 
-ca.maxchernoff.michelson_interferometer.oci.tar: flatpak/ca.maxchernoff.michelson_interferometer.yaml michelson_interferometer/main.ui michelson_interferometer/*.py pyproject.toml
+ca.maxchernoff.michelson_interferometer.flatpak: flatpak/ca.maxchernoff.michelson_interferometer.yaml michelson_interferometer/main.ui michelson_interferometer/*.py pyproject.toml
 	source ./.venv/bin/activate
 	flatpak --user run --devel --share=network --filesystem=host --command=pip3 org.gnome.Sdk//48 download --only-binary=":all:" --no-binary="pyft232" --no-build-isolation --dest=./wheels/ .
 	flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 	flatpak-builder --user --install-deps-from=flathub --repo=repo --install --ccache --force-clean ./build/ $<
-	flatpak build-bundle --oci ./repo ca.maxchernoff.michelson_interferometer.oci ca.maxchernoff.michelson_interferometer
-	skopeo copy oci:./ca.maxchernoff.michelson_interferometer.oci oci-archive:./ca.maxchernoff.michelson_interferometer.oci.tar
+	flatpak build-bundle ./repo ca.maxchernoff.michelson_interferometer.flatpak ca.maxchernoff.michelson_interferometer
 
 # Run the GUI
 .PHONY: run

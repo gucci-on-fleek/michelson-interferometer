@@ -131,6 +131,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.motion_should_stop = False
 
         # self.default_jog = None
+
     def set_position(self, value: float) -> None:
         self.ignore_position_changes = True
         self.position.set_value(value)
@@ -187,7 +188,9 @@ class MainWindow(Adw.ApplicationWindow):
         sleep(0.1)
         self.motor._device.setup_jog(min_velocity=0, max_velocity=100)
         sleep(0.1)
-        self.motor._device.setup_velocity(min_velocity=0, max_velocity=100, scale=True)
+        self.motor._device.setup_velocity(
+            min_velocity=0, max_velocity=100, scale=True
+        )
         sleep(0.1)
         if self.motion_thread and self.motion_thread.is_alive():
             self.motion_should_stop = True
@@ -313,11 +316,15 @@ class MainWindow(Adw.ApplicationWindow):
         #     self.default_jog = self.motor._device.get_jog_parameters()
 
         sleep(0.1)
-        self.motor._device.setup_jog(min_velocity=abs(speed), max_velocity=abs(speed), scale=True)
+        self.motor._device.setup_jog(
+            min_velocity=abs(speed), max_velocity=abs(speed), scale=True
+        )
         sleep(0.1)
         print("!!!", speed)
         # self.motor._device.setup_drive(velocity=speed)
-        self.motor._device.setup_velocity(min_velocity=abs(speed), max_velocity=abs(speed), scale=True)
+        self.motor._device.setup_velocity(
+            min_velocity=abs(speed), max_velocity=abs(speed), scale=True
+        )
         sleep(0.1)
         self.motor._device.jog("+" if speed < 0 else "-", kind="continuous")
         # self.motor.wait()

@@ -3,13 +3,12 @@
 # SPDX-License-Identifier: MPL-2.0+
 # SPDX-FileCopyrightText: 2025 Max Chernoff
 
-__pycache__/
-.flatpak-builder/
-.venv/
-*.egg-info/
+__pycache__
+.flatpak-builder
+.venv
+*.egg-info
 *.ui
-build/
-ca.maxchernoff.michelson_interferometer.oci.tar
-ca.maxchernoff.michelson_interferometer.oci/
-repo/
-wheels/
+build
+ca.maxchernoff.michelson_interferometer.flatpak
+repo
+wheels
