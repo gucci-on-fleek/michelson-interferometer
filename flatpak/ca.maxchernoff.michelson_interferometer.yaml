@@ -1,3 +1,8 @@
+# Michelson Interferometer Control Software
+# https://github.com/gucci-on-fleek/michelson-interferometer
+# SPDX-License-Identifier: MPL-2.0+
+# SPDX-FileCopyrightText: 2025 Max Chernoff
+
 id: ca.maxchernoff.michelson_interferometer
 runtime: org.gnome.Platform
 runtime-version: "48"

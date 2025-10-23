@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pygobject-stubs ~= 2.0"]
+dev = ["pygobject-stubs ~= 2.13.0 "]
 gtk = ["pycairo == 1.28.0", "PyGObject == 3.52.3"]
 
 [build-system]

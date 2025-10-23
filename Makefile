@@ -75,7 +75,6 @@ build/wheels/.all-downloaded: build/.gnome-sdk-installed pyproject.toml
 
 	touch $@
 
-
 # Build the Flatpak repository
 build/repo/refs/heads/app/ca.maxchernoff.michelson_interferometer/x86_64/master: \
 	build/.flathub-enabled \
@@ -116,3 +115,43 @@ run-flatpak:
 
 	flatpak run ca.maxchernoff.michelson_interferometer \
 		-m michelson_interferometer.gui
+
+# Download the necessary Ubuntu packages
+build/ubuntu-packages/.all-downloaded:
+	mkdir -p build/ubuntu-packages/
+	wget --directory-prefix build/ubuntu-packages/ \
+		"http://security.ubuntu.com/ubuntu/pool/universe/f/flatpak/flatpak_1.12.7-1ubuntu0.1_amd64.deb" \
+		"http://ubuntu.cs.utah.edu/ubuntu/pool/main/x/xdg-dbus-proxy/xdg-dbus-proxy_0.1.6-1_amd64.deb" \
+		"http://ubuntu.cs.utah.edu/ubuntu/pool/universe/a/appstream-glib/libappstream-glib8_0.7.18-2_amd64.deb" \
+		"http://ubuntu.cs.utah.edu/ubuntu/pool/universe/m/malcontent/libmalcontent-0-0_0.10.4-1_amd64.deb" \
+		"http://ubuntu.cs.utah.edu/ubuntu/pool/universe/o/ostree/libostree-1-1_2022.2-3_amd64.deb"
+
+	touch $@
+
+# Unpack the Ubuntu packages
+build/ubuntu-tree/.all-unpacked: build/ubuntu-packages/.all-downloaded
+	mkdir -p ./build/ubuntu-tree/
+	cd ./build/ubuntu-tree/
+
+	for package in ../ubuntu-packages/*.deb; do
+		ar x $$package
+		tar xf ./data.tar.*
+		rm ./*.tar.* ./debian-binary
+	done
+
+	touch ./.all-unpacked
+
+# Creates the non-root Flatpak command installation bundle
+.PHONY: build-flatpak-cmd-bundle
+build-flatpak-cmd-bundle: build/flatpak.tar.zstd ;
+
+build/flatpak.tar.zstd: flatpak/user-flatpak.sh
+	rm -r ./build/flatpak-tree/ >/dev/null || true
+	mkdir -p ./build/flatpak-tree/{lib,bin,libexec}/
+
+	cp ./build/ubuntu-tree/usr/lib/x86_64-linux-gnu/* ./build/flatpak-tree/lib/
+	cp ./build/ubuntu-tree/usr/bin/xdg-dbus-proxy ./build/flatpak-tree/bin/
+	cp ./flatpak/user-flatpak.sh ./build/flatpak-tree/bin/flatpak
+	cp ./build/ubuntu-tree/usr/bin/flatpak ./build/flatpak-tree/libexec/
+
+	tar --zstd -cf ./build/flatpak.tar.zstd -C ./build/flatpak-tree/ .
