@@ -23,8 +23,7 @@ from matplotlib.backends.backend_gtk4agg import (
 from matplotlib.figure import Figure
 
 # from . import devices_mock as devices
-from . import devices
-from .utils import start_thread
+from . import devices, utils
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -54,6 +53,8 @@ TSV_HEADER = (
 
 
 class Application(Adw.Application):
+    """The top-level application."""
+
     def __init__(self) -> None:
         super().__init__(application_id=APP_ID)
         GLib.set_prgname(APP_NAME)
@@ -65,8 +66,11 @@ class Application(Adw.Application):
 
 @Gtk.Template(filename=str(UI_PATH / "main.ui"))
 class MainWindow(Adw.ApplicationWindow):
+    """The main (and only) window of the application."""
+
     __gtype_name__ = "MainWindow"
 
+    # UI Elements
     about_dialog: Adw.AboutDialog = Gtk.Template.Child()
     data_panel: Adw.ToolbarView = Gtk.Template.Child()
     detector_value: Gtk.Label = Gtk.Template.Child()
@@ -83,39 +87,80 @@ class MainWindow(Adw.ApplicationWindow):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        action = Gio.SimpleAction.new("about", None)
-        action.connect(
-            "activate", lambda action, param: self.about_dialog.present()
-        )
-        self.add_action(action)
+        # Register the "about" action
+        self._register_about_action()
 
-        display = self.get_display()
-        screen = display.get_monitors()[0]
-        self.resolution: float = screen.get_scale() * 96  # type: ignore
-
+        # Initialize the devices
         self.motor = devices.Motor(
             on_update=lambda value: GLib.idle_add(self.set_position, value)
         )
         self.detector = devices.Detector(
             on_update=lambda value: GLib.idle_add(self.update_detector, value)
         )
+
+        # Initialize the plotter
+        self._initialize_plotter()
+
+        # Initialize variables
         self.current_motion = self.stop_motion_button
-
         self.ignore_position_changes = False
-
-        self.plot_width = 200
-        self.plot_height = 200
-
-        self.gain_changed(self.gain)
-
-        start_thread(self.draw_plot)
-
         self.motion_thread: Thread | None = None
         self.motion_should_stop = False
 
-        # self.default_jog = None
+        # Update the gain
+        self.gain_changed(self.gain)
+
+    def _register_about_action(self) -> None:
+        """Register the "about" action."""
+        action = Gio.SimpleAction.new("about", None)
+        action.connect(
+            "activate", lambda action, param: self.about_dialog.present()
+        )
+        self.add_action(action)
+
+    def _get_resolution(self) -> float:
+        """Initialize the display resolution."""
+        display = self.get_display()
+        screen = display.get_monitors()[0]
+        return screen.get_scale() * 96  # type: ignore
+
+    def _initialize_plotter(self) -> None:
+        """Initialize the plotter."""
+        resolution = self._get_resolution()
+        self.plot_width = 200
+        self.plot_height = 200
+
+        self.plotter = utils.Plotter(resolution)
+
+    def _plot_thread(self) -> None:
+        """Thread that continuously updates the plot."""
+        while True:
+            sleep(PLOT_UPDATE_INTERVAL)
+            figure = self.plotter.draw_plot(
+                self.plot_width,
+                self.plot_height,
+                np.array(self.detector.data),
+                np.array(self.motor.data),
+            )
+
+            if figure is not None:
+                GLib.idle_add(self.render_plot, figure)
+
+    def render_plot(self, canvas: FigureCanvas) -> None:
+        """Render the plot in the GUI, from the main thread."""
+        canvas.set_size_request(
+            int(0.9 * self.plot_width), int(0.9 * self.plot_height)
+        )
+        child = self.plot_box.get_first_child()
+        if child:
+            self.plot_box.remove(child)
+        self.plot_box.append(canvas)
+
+        self.plot_width = self.data_panel.get_width()
+        self.plot_height = self.data_panel.get_height() - 200
 
     def set_position(self, value: float) -> None:
+        """Set the position spinner value."""
         self.ignore_position_changes = True
         self.position.set_value(value)
         self.ignore_position_changes = False
@@ -150,7 +195,7 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def run_backwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        self.motion_thread = start_thread(
+        self.motion_thread = utils.start_thread(
             self.do_motion,
             self.initial_position.get_value(),
             -self.speed.get_value(),
@@ -193,7 +238,7 @@ class MainWindow(Adw.ApplicationWindow):
     @Gtk.Template.Callback()
     def run_forwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
-        self.motion_thread = start_thread(
+        self.motion_thread = utils.start_thread(
             self.do_motion,
             self.final_position.get_value(),
             self.speed.get_value(),
@@ -241,59 +286,6 @@ class MainWindow(Adw.ApplicationWindow):
     def update_detector(self, value: int) -> None:
         self.detector_value.set_label(f"{value}")
 
-    def draw_plot(self) -> None:
-        while True:
-            sleep(PLOT_UPDATE_INTERVAL)
-            figure = Figure(
-                figsize=(
-                    10 * self.plot_width / self.resolution,
-                    10 * self.plot_height / self.resolution,
-                ),
-                dpi=self.resolution,
-            )
-            figure.subplots_adjust(bottom=0.20, left=0.20)
-            ax1 = figure.add_subplot()
-            ax2 = ax1.twinx()
-
-            ax1.set_xlabel("Time (s)")
-            ax1.set_ylabel("Intensity")
-            ax2.set_xlabel("Time (s)")
-            ax2.set_ylabel("Position (mm)")
-            ax2.grid(visible=False)
-
-            detector = np.array(self.detector.data)
-            motor = np.array(self.motor.data)
-            try:
-                ax1.plot(
-                    detector[:, 0] - detector[0, 0],
-                    detector[:, 1],
-                    ".C0",
-                    label="Detector",
-                )
-                ax2.plot(
-                    motor[:, 0] - motor[0, 0],
-                    motor[:, 1],
-                    ".C1",
-                    label="Mirror",
-                )
-            except IndexError:
-                continue
-            figure.legend(loc="outside upper right")
-
-            GLib.idle_add(self.render_plot, FigureCanvas(figure))
-
-    def render_plot(self, canvas: FigureCanvas) -> None:
-        canvas.set_size_request(
-            int(0.9 * self.plot_width), int(0.9 * self.plot_height)
-        )
-        child = self.plot_box.get_first_child()
-        if child:
-            self.plot_box.remove(child)
-        self.plot_box.append(canvas)
-
-        self.plot_width = self.data_panel.get_width()
-        self.plot_height = self.data_panel.get_height() - 200
-
     def do_motion(self, end: float, speed: float) -> None:
         # if self.default_jog is None:
         #     self.default_jog = self.motor._device.get_jog_parameters()
@@ -320,18 +312,7 @@ class MainWindow(Adw.ApplicationWindow):
 ###################
 
 
-def configure_matplotlib() -> None:
-    plt.rcParams["font.family"] = "STIXGeneral"
-    plt.rcParams["mathtext.fontset"] = "stix"
-    plt.rcParams["font.size"] = 10
-
-    # Enable the grid
-    plt.rcParams["axes.grid"] = True
-    plt.rcParams["axes.grid.which"] = "major"
-
-
 def main() -> None:
-    configure_matplotlib()
     appplication = Application()
     appplication.run(sys.argv)
 
