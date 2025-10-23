@@ -38,7 +38,7 @@ APP_NAME = "Michelson Interferometer"
 APP_ID = "ca.maxchernoff.michelson_interferometer"
 
 UI_PATH = Path(__file__).parent
-PLOT_UPDATE_INTERVAL = 0.5  # seconds
+PLOT_UPDATE_INTERVAL = 1  # seconds
 TSV_HEADER = (
     "motor_time",
     "motor_position",
