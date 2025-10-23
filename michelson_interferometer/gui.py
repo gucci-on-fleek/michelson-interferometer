@@ -21,6 +21,7 @@ from matplotlib.backends.backend_gtk4agg import (
 
 from . import devices, utils
 
+# Gtk imports
 import gi
 
 gi.require_version("Gtk", "4.0")

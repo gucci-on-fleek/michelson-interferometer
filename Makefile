@@ -28,14 +28,14 @@ default:
 # Create the venv and install dependencies
 .venv/bin/activate: pyproject.toml
 	# Create the virtual environment and activate it
-	${VENV} ./.venv/
+	${VENV} ./.venv/ || true
 	source ./.venv/bin/activate
 
 	# Upgrade pip inside the venv so that it recognizes pyproject.toml
 	pip3 install --upgrade pip
 
 	# Install the packages
-	pip3 install .[dev, gtk]
+	pip3 install .[dev]
 
 	# Touch the activate file so that make knows the target is up to date
 	touch ./.venv/bin/activate
