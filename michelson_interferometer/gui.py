@@ -14,13 +14,14 @@ from pathlib import Path
 from threading import Thread
 from time import sleep
 
-import gi
 import numpy as np
 from matplotlib.backends.backend_gtk4agg import (
     FigureCanvasGTK4Agg as FigureCanvas,
 )
 
 from . import devices, utils
+
+import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")

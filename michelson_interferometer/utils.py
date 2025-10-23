@@ -8,7 +8,6 @@
 ###############
 
 from threading import Thread
-from time import sleep
 from typing import Callable
 
 import matplotlib.pyplot as plt
@@ -44,7 +43,7 @@ class Plotter:
     ) -> None:
         """Configure the matplotlib settings."""
         plt.rcParams["font.family"] = "Adwaita Sans"
-        plt.rcParams["font.size"] = 10
+        plt.rcParams["font.size"] = 14
 
         # Enable the grid
         plt.rcParams["axes.grid"] = True
