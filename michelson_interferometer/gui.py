@@ -13,6 +13,7 @@ from csv import writer as csv_writer
 from pathlib import Path
 from threading import Thread
 from time import sleep
+from warnings import catch_warnings
 
 import numpy as np
 from matplotlib.backends.backend_gtk4agg import (
@@ -21,7 +22,7 @@ from matplotlib.backends.backend_gtk4agg import (
 
 from . import devices, utils
 
-# Gtk imports
+# GTK imports
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -37,9 +38,7 @@ APP_NAME = "Michelson Interferometer"
 APP_ID = "ca.maxchernoff.michelson_interferometer"
 
 UI_PATH = Path(__file__).parent
-PLOT_SCALE_FACTOR = 0.9
 PLOT_UPDATE_INTERVAL = 1  # seconds
-PLOT_VERTICAL_SUBTRACT = 200
 TSV_HEADER = (
     "motor_time",
     "motor_position",
@@ -73,7 +72,6 @@ class MainWindow(Adw.ApplicationWindow):
 
     # UI Elements
     about_dialog: Adw.AboutDialog = Gtk.Template.Child()
-    data_panel: Adw.ToolbarView = Gtk.Template.Child()
     detector_value: Gtk.Label = Gtk.Template.Child()
     final_position: Adw.SpinRow = Gtk.Template.Child()
     gain: Adw.SpinRow = Gtk.Template.Child()
@@ -128,10 +126,23 @@ class MainWindow(Adw.ApplicationWindow):
     def _initialize_plotter(self) -> None:
         """Initialize the plotter."""
         resolution = self._get_resolution()
-        self.plot_width = PLOT_VERTICAL_SUBTRACT
-        self.plot_height = PLOT_VERTICAL_SUBTRACT
+        self.plot_width = 200
+        self.plot_height = 200
 
-        self.plotter = utils.Plotter(resolution)
+        with catch_warnings(category=DeprecationWarning, action="ignore"):
+            style = self.get_style_context()
+            adw_style = Adw.StyleManager.get_default()
+
+            background_colour = style.lookup_color("window_bg_color")[1]
+            foreground_colour = style.lookup_color("window_fg_color")[1]
+            font: str = adw_style.get_document_font_name()  # type: ignore
+
+        self.plotter = utils.Plotter(
+            resolution=resolution,
+            background_colour=background_colour,
+            foreground_colour=foreground_colour,
+            font_and_size=font,
+        )
         utils.start_thread(self._plot_thread)
 
     def _plot_thread(self) -> None:
@@ -150,14 +161,10 @@ class MainWindow(Adw.ApplicationWindow):
 
     def render_plot(self, canvas: FigureCanvas) -> None:
         """Render the plot in the GUI, from the main thread."""
-        # canvas.set_size_request(
-        #     int(PLOT_SCALE_FACTOR * self.plot_width),
-        #     int(PLOT_SCALE_FACTOR * self.plot_height),
-        # )
         self.plot_bin.set_child(canvas)
 
-        self.plot_width = self.data_panel.get_width()
-        self.plot_height = self.data_panel.get_height() - PLOT_VERTICAL_SUBTRACT
+        self.plot_width = self.plot_bin.get_width()
+        self.plot_height = self.plot_bin.get_height()
 
     def set_position(self, value: float) -> None:
         """Set the position spinner value."""

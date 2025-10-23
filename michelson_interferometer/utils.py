@@ -17,6 +17,13 @@ from matplotlib.backends.backend_gtk4agg import (
 )
 from matplotlib.figure import Figure
 
+# GTK Imports
+import gi
+
+gi.require_version("Gtk", "4.0")
+
+from gi.repository import Gdk  # type: ignore
+
 ############################
 ### Function Definitions ###
 ############################
@@ -31,6 +38,12 @@ def start_thread(func: Callable, *args) -> Thread:
     return thread
 
 
+def gtk_colour_to_tuple(colour: Gdk.RGBA) -> tuple[float, float, float, float]:
+    """Convert a Gdk.RGBA colour to a tuple."""
+
+    return (colour.red, colour.green, colour.blue, colour.alpha)
+
+
 #########################
 ### Class Definitions ###
 #########################
@@ -40,16 +53,36 @@ class Plotter:
     def __init__(
         self,
         resolution: float,
+        background_colour: Gdk.RGBA,
+        foreground_colour: Gdk.RGBA,
+        font_and_size: str,
     ) -> None:
         """Configure the matplotlib settings."""
-        plt.rcParams["font.family"] = "Adwaita Sans"
-        plt.rcParams["font.size"] = 14
-        plt.rcParams["axes.facecolor"] = "blue"
-        plt.rcParams["figure.facecolor"] = (1, 0, 0, 0.1)  # Transparent
+        # Fonts
+        font, size = font_and_size.rsplit(" ", 1)
+        plt.rcParams["font.family"] = font
+        plt.rcParams["font.size"] = int(size)
+
+        # Background colours
+        bg = gtk_colour_to_tuple(background_colour)
+        plt.rcParams["figure.facecolor"] = bg
+        plt.rcParams["axes.facecolor"] = bg
+        plt.rcParams["figure.edgecolor"] = bg
+
+        # Foreground colours
+        fg = gtk_colour_to_tuple(foreground_colour)
+        plt.rcParams["axes.edgecolor"] = fg
+        plt.rcParams["text.color"] = fg
+        plt.rcParams["axes.labelcolor"] = fg
+        plt.rcParams["xtick.color"] = fg
+        plt.rcParams["ytick.color"] = fg
 
         # Enable the grid
         plt.rcParams["axes.grid"] = True
         plt.rcParams["axes.grid.which"] = "major"
+
+        # Layout
+        plt.rcParams["figure.constrained_layout.use"] = True
 
         # Set the variables
         self.resolution = resolution
@@ -80,7 +113,6 @@ class Plotter:
         ax2.set_xlabel("Time (s)")
         ax2.set_ylabel("Position (mm)")
         ax2.grid(visible=False)
-        figure.subplots_adjust(bottom=0.1, left=0.1)
 
         # Plot the data
         try:

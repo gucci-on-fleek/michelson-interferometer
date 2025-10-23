@@ -326,8 +326,8 @@ template $MainWindow: Adw.ApplicationWindow {
                 hexpand: true;
                 vexpand: true;
                 orientation: vertical;
-                halign: start;
-                valign: start;
+                halign: fill;
+                valign: fill;
                 spacing: 6;
                 margin-start: 12;
                 margin-end: 12;
@@ -336,6 +336,7 @@ template $MainWindow: Adw.ApplicationWindow {
 
                 Label {
                     label: "Detector Value";
+                    halign: start;
 
                     styles [
                         "heading",
@@ -345,21 +346,20 @@ template $MainWindow: Adw.ApplicationWindow {
                 Label detector_value {
                     styles [
                         "monospace",
+                        "title-1",
                     ]
                 }
 
                 Label {
                     label: "Plot";
+                    halign: start;
 
                     styles [
                         "heading",
                     ]
                 }
 
-                Adw.Bin plot_bin {
-                    hexpand: true;
-                    vexpand: true;
-                }
+                Adw.Bin plot_bin {}
             }
         }
     }
