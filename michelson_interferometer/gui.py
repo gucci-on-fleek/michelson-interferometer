@@ -15,14 +15,11 @@ from threading import Thread
 from time import sleep
 
 import gi
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_gtk4agg import (
     FigureCanvasGTK4Agg as FigureCanvas,
 )
-from matplotlib.figure import Figure
 
-# from . import devices_mock as devices
 from . import devices, utils
 
 gi.require_version("Gtk", "4.0")
@@ -38,7 +35,9 @@ APP_NAME = "Michelson Interferometer"
 APP_ID = "ca.maxchernoff.michelson_interferometer"
 
 UI_PATH = Path(__file__).parent
+PLOT_SCALE_FACTOR = 0.9
 PLOT_UPDATE_INTERVAL = 1  # seconds
+PLOT_VERTICAL_SUBTRACT = 200
 TSV_HEADER = (
     "motor_time",
     "motor_position",
@@ -127,8 +126,8 @@ class MainWindow(Adw.ApplicationWindow):
     def _initialize_plotter(self) -> None:
         """Initialize the plotter."""
         resolution = self._get_resolution()
-        self.plot_width = 200
-        self.plot_height = 200
+        self.plot_width = PLOT_VERTICAL_SUBTRACT
+        self.plot_height = PLOT_VERTICAL_SUBTRACT
 
         self.plotter = utils.Plotter(resolution)
         utils.start_thread(self._plot_thread)
@@ -150,15 +149,17 @@ class MainWindow(Adw.ApplicationWindow):
     def render_plot(self, canvas: FigureCanvas) -> None:
         """Render the plot in the GUI, from the main thread."""
         canvas.set_size_request(
-            int(0.9 * self.plot_width), int(0.9 * self.plot_height)
+            int(PLOT_SCALE_FACTOR * self.plot_width),
+            int(PLOT_SCALE_FACTOR * self.plot_height),
         )
         child = self.plot_box.get_first_child()
+
         if child:
             self.plot_box.remove(child)
         self.plot_box.append(canvas)
 
         self.plot_width = self.data_panel.get_width()
-        self.plot_height = self.data_panel.get_height() - 200
+        self.plot_height = self.data_panel.get_height() - PLOT_VERTICAL_SUBTRACT
 
     def set_position(self, value: float) -> None:
         """Set the position spinner value."""
@@ -168,77 +169,83 @@ class MainWindow(Adw.ApplicationWindow):
 
     @Gtk.Template.Callback()
     def position_changed(self, spinner: Adw.SpinRow) -> None:
+        """Handle changes to the position spinner."""
         if not self.ignore_position_changes:
             value = spinner.get_value()
             self.motor.set_position(value)
 
     @Gtk.Template.Callback()
     def gain_changed(self, spinner: Adw.SpinRow) -> None:
+        """Handle changes to the gain spinner."""
         value = spinner.get_value()
         self.detector.gain = int(value)
 
     @Gtk.Template.Callback()
     def home_motor(self, button: Adw.ButtonRow) -> None:  # type: ignore
+        """Handle the "Home Motor" button press."""
         self.motor.home()
 
     def set_current_motion(self, motion: Gtk.Button) -> None:
+        """Update the current motion button styling."""
         self.current_motion.remove_css_class("suggested-action")
         motion.add_css_class("suggested-action")
         self.current_motion = motion
 
     @Gtk.Template.Callback()
     def go_to_initial(self, button: Gtk.Button) -> None:
+        """Handle the "Go to Initial Position" button press."""
         self.set_current_motion(button)
+
         value = self.initial_position.get_value()
         self.motor.set_position(value)
+
         self.set_current_motion(self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def run_backwards(self, button: Gtk.Button) -> None:
+        """Handle the "Run Backwards" button press."""
         self.set_current_motion(button)
+
         self.motion_thread = utils.start_thread(
             self._go_with_speed,
             self.initial_position.get_value(),
-            -self.speed.get_value(),
+            self.speed.get_value(),
         )
 
     @Gtk.Template.Callback()
     def step_backwards(self, button: Gtk.Button) -> None:
+        """Handle the "Step Backwards" button press."""
         self.set_current_motion(button)
+
         current = self.motor.position
         step = self.step.get_value()
         self.motor.set_position(current - step)
+
         self.set_current_motion(self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def stop_motion(self, button: Gtk.Button) -> None:
+        """Handle the "Stop Motion" button press."""
         self.set_current_motion(button)
-        # if self.default_jog:
-        sleep(0.1)
-        self.motor._device.setup_jog(min_velocity=0, max_velocity=100)
-        sleep(0.1)
-        self.motor._device.setup_velocity(
-            min_velocity=0, max_velocity=100, scale=True
-        )
-        sleep(0.1)
-        if self.motion_thread and self.motion_thread.is_alive():
-            self.motion_should_stop = True
-            self.motion_thread.join()
-            self.motion_should_stop = False
 
         self.motor.stop()
 
     @Gtk.Template.Callback()
     def step_forwards(self, button: Gtk.Button) -> None:
+        """Handle the "Step Forwards" button press."""
         self.set_current_motion(button)
+
         current = self.motor.position
         step = self.step.get_value()
         self.motor.set_position(current + step)
+
         self.set_current_motion(self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def run_forwards(self, button: Gtk.Button) -> None:
+        """Handle the "Run Forwards" button press."""
         self.set_current_motion(button)
+
         self.motion_thread = utils.start_thread(
             self._go_with_speed,
             self.final_position.get_value(),
@@ -247,30 +254,46 @@ class MainWindow(Adw.ApplicationWindow):
 
     @Gtk.Template.Callback()
     def go_to_final(self, button: Gtk.Button) -> None:
+        """Handle the "Go to Final Position" button press."""
         self.set_current_motion(button)
+
         value = self.final_position.get_value()
         self.motor.set_position(value)
+
         self.set_current_motion(self.stop_motion_button)
 
     def _go_with_speed(self, end: float, speed: float) -> None:
+        """Thread that moves the motor to a position at a given speed."""
         self.motor.set_position(end, speed)
         self.motor.wait()
         GLib.idle_add(self.set_current_motion, self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def save_data(self, button: Adw.SplitButton) -> None:
+        """Handle the "Save Data" button press."""
         self.save_as.save(callback=self.on_save_dialog_response)
 
     def on_save_dialog_response(
         self, dialog: Gtk.FileDialog, task: Gio.Task
     ) -> None:
+        """Handle the save dialog response."""
+
+        # Get the response from the dialog
         file = dialog.save_finish(task)
         if file is None:
             return
+
+        # Make sure that the file has a .tsv extension
         path = Path(file.get_path()).with_suffix(".tsv")  # type: ignore
+
+        # Open the file and write the data
         with path.open("w") as f:
             writer = csv_writer(f, dialect=excel_tab)
+
+            # Write the header
             writer.writerow(TSV_HEADER)
+
+            # Write the data
             for (motor_time, motor_position), (
                 detector_time,
                 detector_intensity,
@@ -286,10 +309,12 @@ class MainWindow(Adw.ApplicationWindow):
 
     @Gtk.Template.Callback()
     def clear_data(self, button: Gtk.Button) -> None:
+        """Handle the "Clear Data" button press."""
         self.motor.data.clear()
         self.detector.data.clear()
 
     def update_detector(self, value: int) -> None:
+        """Callback function to update the detector value display."""
         self.detector_value.set_label(f"{value}")
 
 
@@ -299,6 +324,7 @@ class MainWindow(Adw.ApplicationWindow):
 
 
 def main() -> None:
+    """Runs the application."""
     appplication = Application()
     appplication.run(sys.argv)
 

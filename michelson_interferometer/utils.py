@@ -10,6 +10,7 @@
 from threading import Thread
 from time import sleep
 from typing import Callable
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_gtk4agg import (

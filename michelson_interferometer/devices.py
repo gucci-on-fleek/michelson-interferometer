@@ -9,14 +9,16 @@
 ###############
 
 from glob import glob
-from queue import Queue, Empty
+from itertools import cycle
+from queue import Empty, Queue
+from threading import Lock
 from time import sleep
 from time import time as unix_time
+from traceback import print_exc
 from typing import Any, Callable
-from itertools import cycle
 
 from pylablib.core.devio.SCPI import SCPIDevice
-from pylablib.devices.Thorlabs import KinesisMotor
+from pylablib.devices.Thorlabs import KinesisMotor, ThorlabsError
 
 from .utils import start_thread
 
@@ -49,6 +51,7 @@ class Motor:
     """Controls the motor that moves the mirror."""
 
     def __init__(self, on_update: Callable[[float], Any]) -> None:
+        # Initialize the device
         try:
             path = glob(MOTOR_DEVICE_GLOB)[0]
         except IndexError:
@@ -59,19 +62,24 @@ class Motor:
             scale=MOTOR_SCALE,  # type: ignore[arg-type]
         )
 
+        # Initialize the variables
         self.on_update = on_update
         self.data: list[tuple[float, float]] = []
-        self._thread = start_thread(self._run_thread)
         self._current_speed = MOTOR_MAX_SPEED
+
+        # Initialize the thread
+        self._thread = start_thread(self._run_thread)
         self._queue: Queue[
             tuple[Callable[[float], None], float]
             | tuple[Callable[[None], None], None]
         ] = Queue()
 
+        # Home the motor at startup
         self.home()
 
     def wait(self) -> None:
         """Waits for the motor to finish any current movement."""
+        sleep(2 * SLEEP_DURATION)
         self._device.wait_for_stop()
 
     def home(self) -> None:
@@ -138,13 +146,17 @@ class Motor:
                 except Empty:
                     pass
 
-            func(arg)  # type: ignore[arg-type]
+            try:
+                func(arg)  # type: ignore[arg-type]
+            except ThorlabsError:
+                print_exc()
 
 
 class Detector:
     """Controls the light intensity detector."""
 
     def __init__(self, on_update: Callable[[int], Any]) -> None:
+        # Initialize the device
         try:
             path = glob(DETECTOR_DEVICE_GLOB)[0]
         except IndexError:
@@ -156,29 +168,39 @@ class Detector:
             term_write=DETECTOR_NL,
         )
 
+        # Initialize the variables
         self.on_update = on_update
         self.data: list[tuple[float, int]] = []
+
+        # Initialize the thread
+        self._lock = Lock()
         self._thread = start_thread(self._run_thread)
 
-        assert self._device.get_id()
+        # Verify connection
+        if not self._device.get_id():
+            raise IOError("Failed to connect to detector")
 
     @property
     def gain(self) -> int:
         """Gets the current position of the mirror in millimeters."""
-        value = self._device.ask("det:gain?", "int")
+        with self._lock:
+            value = self._device.ask("det:gain?", "int")
+
         assert isinstance(value, int)
         return value
 
     @gain.setter
     def gain(self, value: int) -> None:
         """Sets the position of the mirror in millimeters."""
-        self._device.write(f"det:gain {value}")
-        sleep(SLEEP_DURATION)  # Give the detector time to adjust, hack!
+        with self._lock:
+            self._device.write(f"det:gain {value}")
 
     @property
     def intensity(self) -> int:
         """Gets the current light intensity reading from the detector."""
-        value = self._device.ask("det:meas?", "int")
+        with self._lock:
+            value = self._device.ask("det:meas?", "int")
+
         assert isinstance(value, int)
         return value
 
