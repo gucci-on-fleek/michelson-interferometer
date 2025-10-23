@@ -44,6 +44,7 @@ class Plotter:
         """Configure the matplotlib settings."""
         plt.rcParams["font.family"] = "Adwaita Sans"
         plt.rcParams["font.size"] = 14
+        plt.rcParams["axes.facecolor"] = "red"
 
         # Enable the grid
         plt.rcParams["axes.grid"] = True
