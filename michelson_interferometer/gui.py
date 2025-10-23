@@ -78,7 +78,7 @@ class MainWindow(Adw.ApplicationWindow):
     final_position: Adw.SpinRow = Gtk.Template.Child()
     gain: Adw.SpinRow = Gtk.Template.Child()
     initial_position: Adw.SpinRow = Gtk.Template.Child()
-    plot_box: Gtk.Box = Gtk.Template.Child()
+    plot_bin: Adw.Bin = Gtk.Template.Child()
     position: Adw.SpinRow = Gtk.Template.Child()
     save_as: Gtk.FileDialog = Gtk.Template.Child()
     step: Adw.SpinRow = Gtk.Template.Child()
@@ -150,15 +150,11 @@ class MainWindow(Adw.ApplicationWindow):
 
     def render_plot(self, canvas: FigureCanvas) -> None:
         """Render the plot in the GUI, from the main thread."""
-        canvas.set_size_request(
-            int(PLOT_SCALE_FACTOR * self.plot_width),
-            int(PLOT_SCALE_FACTOR * self.plot_height),
-        )
-        child = self.plot_box.get_first_child()
-
-        if child:
-            self.plot_box.remove(child)
-        self.plot_box.append(canvas)
+        # canvas.set_size_request(
+        #     int(PLOT_SCALE_FACTOR * self.plot_width),
+        #     int(PLOT_SCALE_FACTOR * self.plot_height),
+        # )
+        self.plot_bin.set_child(canvas)
 
         self.plot_width = self.data_panel.get_width()
         self.plot_height = self.data_panel.get_height() - PLOT_VERTICAL_SUBTRACT
