@@ -78,7 +78,6 @@ class Plotter:
         ax2.set_xlabel("Time (s)")
         ax2.set_ylabel("Position (mm)")
         ax2.grid(visible=False)
-        figure.legend(loc="outside upper right")
         figure.subplots_adjust(bottom=0.1, left=0.1)
 
         # Plot the data
@@ -97,6 +96,9 @@ class Plotter:
             )
         except IndexError:
             return None
+
+        # Add the legends
+        figure.legend(loc="outside upper right")
 
         # Return the canvas
         return FigureCanvas(figure)

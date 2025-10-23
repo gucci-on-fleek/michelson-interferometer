@@ -170,7 +170,7 @@ class MainWindow(Adw.ApplicationWindow):
     def position_changed(self, spinner: Adw.SpinRow) -> None:
         if not self.ignore_position_changes:
             value = spinner.get_value()
-            self.motor.position = value
+            self.motor.set_position(value)
 
     @Gtk.Template.Callback()
     def gain_changed(self, spinner: Adw.SpinRow) -> None:
@@ -190,14 +190,14 @@ class MainWindow(Adw.ApplicationWindow):
     def go_to_initial(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
         value = self.initial_position.get_value()
-        self.motor.position = value
+        self.motor.set_position(value)
         self.set_current_motion(self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def run_backwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
         self.motion_thread = utils.start_thread(
-            self.do_motion,
+            self._go_with_speed,
             self.initial_position.get_value(),
             -self.speed.get_value(),
         )
@@ -207,7 +207,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.set_current_motion(button)
         current = self.motor.position
         step = self.step.get_value()
-        self.motor.position = current - step
+        self.motor.set_position(current - step)
         self.set_current_motion(self.stop_motion_button)
 
     @Gtk.Template.Callback()
@@ -233,14 +233,14 @@ class MainWindow(Adw.ApplicationWindow):
         self.set_current_motion(button)
         current = self.motor.position
         step = self.step.get_value()
-        self.motor.position = current + step
+        self.motor.set_position(current + step)
         self.set_current_motion(self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def run_forwards(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
         self.motion_thread = utils.start_thread(
-            self.do_motion,
+            self._go_with_speed,
             self.final_position.get_value(),
             self.speed.get_value(),
         )
@@ -249,8 +249,13 @@ class MainWindow(Adw.ApplicationWindow):
     def go_to_final(self, button: Gtk.Button) -> None:
         self.set_current_motion(button)
         value = self.final_position.get_value()
-        self.motor.position = value
+        self.motor.set_position(value)
         self.set_current_motion(self.stop_motion_button)
+
+    def _go_with_speed(self, end: float, speed: float) -> None:
+        self.motor.set_position(end, speed)
+        self.motor.wait()
+        GLib.idle_add(self.set_current_motion, self.stop_motion_button)
 
     @Gtk.Template.Callback()
     def save_data(self, button: Adw.SplitButton) -> None:
@@ -286,26 +291,6 @@ class MainWindow(Adw.ApplicationWindow):
 
     def update_detector(self, value: int) -> None:
         self.detector_value.set_label(f"{value}")
-
-    def do_motion(self, end: float, speed: float) -> None:
-        # if self.default_jog is None:
-        #     self.default_jog = self.motor._device.get_jog_parameters()
-
-        sleep(0.1)
-        self.motor._device.setup_jog(
-            min_velocity=abs(speed), max_velocity=abs(speed), scale=True
-        )
-        sleep(0.1)
-        print("!!!", speed)
-        # self.motor._device.setup_drive(velocity=speed)
-        self.motor._device.setup_velocity(
-            min_velocity=abs(speed), max_velocity=abs(speed), scale=True
-        )
-        sleep(0.1)
-        self.motor._device.jog("+" if speed < 0 else "-", kind="continuous")
-        # self.motor.wait()
-
-        GLib.idle_add(self.set_current_motion, self.stop_motion_button)
 
 
 ###################

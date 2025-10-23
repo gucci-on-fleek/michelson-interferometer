@@ -9,10 +9,11 @@
 ###############
 
 from glob import glob
-from threading import Lock
+from queue import Queue, Empty
 from time import sleep
 from time import time as unix_time
 from typing import Any, Callable
+from itertools import cycle
 
 from pylablib.core.devio.SCPI import SCPIDevice
 from pylablib.devices.Thorlabs import KinesisMotor
@@ -30,6 +31,7 @@ DETECTOR_DEVICE_GLOB = "/dev/ttyACM?"
 #     https://www.thorlabs.com/Software/Motion%20Control/APT_Communications_Protocol.pdf
 MOTOR_SCALE = (2_000, 13_421.77, 1.374)
 MOTOR_MAX_POS = 50.0  # millimeters
+MOTOR_MAX_SPEED = 100.0  # millimeters/second
 
 DETECTOR_BAUD = 115_200
 DETECTOR_TIMEOUT = 0.05  # seconds
@@ -60,44 +62,79 @@ class Motor:
         self.on_update = on_update
         self.data: list[tuple[float, float]] = []
         self._thread = start_thread(self._run_thread)
-        self._lock = Lock()
+        self._queue: Queue[
+            tuple[Callable[[float], None], float]
+            | tuple[Callable[[None], None], None]
+        ] = Queue()
 
         self.home()
 
+    def wait(self) -> None:
+        """Waits for the motor to finish any current movement."""
+        self._device.wait_for_stop()
+
     def home(self) -> None:
         """Homes the motor."""
-        with self._lock:
-            self._device.home(force=True, sync=False)
+        self._queue.put((self._enable, None))
+        self._queue.put((self._home, None))
+
+    def _enable(self, _: None) -> None:
+        self._device._enable_channel(enabled=True)
+
+    def _home(self, _: None) -> None:
+        self._device.home(force=True, sync=False)
 
     def stop(self) -> None:
         """Stops the motor."""
-        with self._lock:
-            self._device.stop()
+        self._queue.put((self._stop, None))
 
-    def wait(self) -> None:
-        """Waits for the motor to finish any current movement."""
-        with self._lock:
-            self._device.wait_for_stop()
+    def _stop(self, _: None) -> None:
+        self._device.stop()
 
     @property
     def position(self) -> float:
         """Gets the current position of the mirror in millimeters."""
-        with self._lock:
-            return self._device.get_position()
+        try:
+            return self.data[-1][1]
+        except IndexError:
+            sleep(2 * SLEEP_DURATION)
+            return self.data[-1][1]
 
-    @position.setter
-    def position(self, value: float) -> None:
-        """Sets the position of the mirror in millimeters."""
-        with self._lock:
-            self._device.move_to(value)
-            sleep(SLEEP_DURATION / 2)
+    def _get_position(self) -> None:
+        """Gets the current position of the mirror and calls on_update."""
+        position = self._device.get_position()
+        self.data.append((unix_time(), position))
+        self.on_update(position)
+
+    def set_position(
+        self, position: float, speed: float = MOTOR_MAX_SPEED
+    ) -> None:
+        """Sets the position of the mirror in millimeters at a given speed."""
+        self._queue.put((self._set_position, position))
+
+    def _set_position(self, position: float) -> None:
+        self._device.move_to(position)
+
+    def _set_speed(self, speed: float) -> None:
+        """Sets the speed of the motor in millimeters/second."""
+        self._device.setup_velocity(max_velocity=speed, scale=True)
 
     def _run_thread(self) -> None:
-        """Calls the on_update callback with the current position."""
-        while True:
+        """Runs the thread."""
+
+        # Every second cycle, run a command from the queue. Otherwise, get the
+        # current position.
+        for should_get_position in cycle([True, False]):
             sleep(SLEEP_DURATION)
-            self.data.append((unix_time(), self.position))
-            self.on_update(self.position)
+            if should_get_position:
+                func, arg = self._get_position, None
+            else:
+                try:
+                    func, arg = self._queue.get_nowait()
+                except Empty:
+                    pass
+
+            func(arg)  # type: ignore[arg-type]
 
 
 class Detector:
@@ -132,7 +169,7 @@ class Detector:
     def gain(self, value: int) -> None:
         """Sets the position of the mirror in millimeters."""
         self._device.write(f"det:gain {value}")
-        sleep(0.1)  # Give the detector time to adjust, hack!
+        sleep(SLEEP_DURATION)  # Give the detector time to adjust, hack!
 
     @property
     def intensity(self) -> int:
