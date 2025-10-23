@@ -9,13 +9,15 @@
 ###############
 
 from glob import glob
-from threading import Thread, Lock
+from threading import Lock
 from time import sleep
 from time import time as unix_time
 from typing import Any, Callable
 
 from pylablib.core.devio.SCPI import SCPIDevice
 from pylablib.devices.Thorlabs import KinesisMotor
+
+from .utils import start_thread
 
 #################
 ### Constants ###
@@ -34,20 +36,6 @@ DETECTOR_TIMEOUT = 0.05  # seconds
 DETECTOR_NL = "\n"
 
 SLEEP_DURATION = 1 / 10  # seconds
-
-
-############################
-### Function Definitions ###
-############################
-
-
-def start_thread(func: Callable) -> Thread:
-    """Run a function in a separate thread."""
-
-    thread = Thread(target=func)
-    thread.daemon = True
-    thread.start()
-    return thread
 
 
 #########################

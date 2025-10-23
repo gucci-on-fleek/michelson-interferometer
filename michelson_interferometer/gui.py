@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Michelson Interferometer Control Software
 # https://github.com/gucci-on-fleek/michelson-interferometer
 # SPDX-License-Identifier: MPL-2.0+
@@ -14,8 +13,6 @@ from csv import writer as csv_writer
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from time import time as unix_time
-from typing import Callable
 
 import gi
 import matplotlib.pyplot as plt
@@ -26,8 +23,8 @@ from matplotlib.backends.backend_gtk4agg import (
 from matplotlib.figure import Figure
 
 # from . import devices_mock as devices
-
 from . import devices
+from .utils import start_thread
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
@@ -49,20 +46,6 @@ TSV_HEADER = (
     "detector_time",
     "detector_intensity",
 )
-
-
-############################
-### Function Definitions ###
-############################
-
-
-def start_thread(func: Callable, *args) -> Thread:
-    """Run a function in a separate thread."""
-
-    thread = Thread(target=func, args=args)
-    thread.daemon = True
-    thread.start()
-    return thread
 
 
 #########################
