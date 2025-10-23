@@ -345,7 +345,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def update_detector(self, value: int) -> None:
         """Callback function to update the detector value display."""
-        self.detector_value.set_label(f"{value:.2f}%")
+        self.detector_value.set_label(f"{value * 100:7.03f}%")
 
 
 ###################
