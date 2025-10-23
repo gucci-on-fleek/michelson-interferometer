@@ -131,6 +131,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.plot_height = 200
 
         self.plotter = utils.Plotter(resolution)
+        utils.start_thread(self._plot_thread)
 
     def _plot_thread(self) -> None:
         """Thread that continuously updates the plot."""
