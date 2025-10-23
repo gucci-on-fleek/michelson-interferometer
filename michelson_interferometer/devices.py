@@ -41,7 +41,7 @@ DETECTOR_BAUD = 115_200
 DETECTOR_TIMEOUT = 0.05  # seconds
 DETECTOR_NL = "\n"
 
-SLEEP_DURATION = 1 / 25  # seconds
+SLEEP_DURATION = 1 / 50  # seconds
 
 
 #########################
@@ -186,6 +186,7 @@ class Detector:
     def gain(self) -> int:
         """Gets the current position of the mirror in millimeters."""
         with self._lock:
+            sleep(SLEEP_DURATION)
             value = self._device.ask("det:gain?", "int")
 
         assert isinstance(value, int)
@@ -195,6 +196,7 @@ class Detector:
     def gain(self, value: int) -> None:
         """Sets the position of the mirror in millimeters."""
         with self._lock:
+            sleep(SLEEP_DURATION)
             self._device.write(f"det:gain {value}")
 
     @property
