@@ -100,10 +100,11 @@ build/repo/refs/heads/app/ca.maxchernoff.michelson_interferometer/x86_64/master:
 	flatpak-builder --user \
 		--install-deps-from=flathub \
 		--repo=./build/flatpak/ \
-		 --force-clean \
-		  --install \
-		 ./build/flatpak/
-		 ./flatpak/ca.maxchernoff.michelson_interferometer.yaml
+		--state-dir=./build/state/ \
+		--force-clean \
+		--install \
+		./build/flatpak/
+		./flatpak/ca.maxchernoff.michelson_interferometer.yaml
 
 # Bundle the Flatpak into a single file
 .PHONY: build-flatpak
