@@ -123,25 +123,34 @@ class MainWindow(Adw.ApplicationWindow):
         screen = display.get_monitors()[0]
         return screen.get_scale() * 96  # type: ignore
 
+    def _get_colour(self, colour_name: str) -> utils.RGBAColour:
+        """Gets the RGBA tuple for a given colour name from the theme."""
+        with catch_warnings(category=DeprecationWarning, action="ignore"):
+            style = self.get_style_context()
+            gdk_colour = style.lookup_color(colour_name)[1]
+
+        return (
+            gdk_colour.red,
+            gdk_colour.green,
+            gdk_colour.blue,
+            gdk_colour.alpha,
+        )
+
     def _initialize_plotter(self) -> None:
         """Initialize the plotter."""
         resolution = self._get_resolution()
         self.plot_width = 200
         self.plot_height = 200
 
-        with catch_warnings(category=DeprecationWarning, action="ignore"):
-            style = self.get_style_context()
-            adw_style = Adw.StyleManager.get_default()
-
-            background_colour = style.lookup_color("window_bg_color")[1]
-            foreground_colour = style.lookup_color("window_fg_color")[1]
-            font: str = adw_style.get_document_font_name()  # type: ignore
+        adw_style = Adw.StyleManager.get_default()
+        font_and_size: str = adw_style.get_document_font_name()  # type: ignore
+        font, size = font_and_size.rsplit(" ", 1)
 
         self.plotter = utils.Plotter(
             resolution=resolution,
-            background_colour=background_colour,
-            foreground_colour=foreground_colour,
-            font_and_size=font,
+            get_colour=self._get_colour,
+            font_name=font,
+            font_size=int(size),
         )
         utils.start_thread(self._plot_thread)
 

@@ -16,13 +16,14 @@ from matplotlib.backends.backend_gtk4agg import (
     FigureCanvasGTK4Agg as FigureCanvas,
 )
 from matplotlib.figure import Figure
+from matplotlib.rcsetup import cycler
 
-# GTK Imports
-import gi
+########################
+### Type Definitions ###
+########################
 
-gi.require_version("Gtk", "4.0")
+type RGBAColour = tuple[float, float, float, float]
 
-from gi.repository import Gdk  # type: ignore
 
 ############################
 ### Function Definitions ###
@@ -38,12 +39,6 @@ def start_thread(func: Callable, *args) -> Thread:
     return thread
 
 
-def gtk_colour_to_tuple(colour: Gdk.RGBA) -> tuple[float, float, float, float]:
-    """Convert a Gdk.RGBA colour to a tuple."""
-
-    return (colour.red, colour.green, colour.blue, colour.alpha)
-
-
 #########################
 ### Class Definitions ###
 #########################
@@ -53,24 +48,23 @@ class Plotter:
     def __init__(
         self,
         resolution: float,
-        background_colour: Gdk.RGBA,
-        foreground_colour: Gdk.RGBA,
-        font_and_size: str,
+        get_colour: Callable[[str], RGBAColour],
+        font_name: str,
+        font_size: int,
     ) -> None:
         """Configure the matplotlib settings."""
         # Fonts
-        font, size = font_and_size.rsplit(" ", 1)
-        plt.rcParams["font.family"] = font
-        plt.rcParams["font.size"] = int(size)
+        plt.rcParams["font.family"] = font_name
+        plt.rcParams["font.size"] = font_size
 
         # Background colours
-        bg = gtk_colour_to_tuple(background_colour)
+        bg = get_colour("window_bg_color")
         plt.rcParams["figure.facecolor"] = bg
         plt.rcParams["axes.facecolor"] = bg
         plt.rcParams["figure.edgecolor"] = bg
 
         # Foreground colours
-        fg = gtk_colour_to_tuple(foreground_colour)
+        fg = get_colour("window_fg_color")
         plt.rcParams["axes.edgecolor"] = fg
         plt.rcParams["text.color"] = fg
         plt.rcParams["axes.labelcolor"] = fg
@@ -80,6 +74,11 @@ class Plotter:
         # Enable the grid
         plt.rcParams["axes.grid"] = True
         plt.rcParams["axes.grid.which"] = "major"
+
+        # Set the colour cycle
+        plt.rcParams["axes.prop_cycle"] = cycler(
+            color=(get_colour("blue_3"), get_colour("orange_3")),
+        )
 
         # Layout
         plt.rcParams["figure.constrained_layout.use"] = True
