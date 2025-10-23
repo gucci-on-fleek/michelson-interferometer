@@ -112,8 +112,7 @@ class Plotter:
 
         # Set the display settings
         ax1.set_xlabel("Time (s)")
-        ax1.set_ylabel("Intensity")
-        ax2.set_xlabel("Time (s)")
+        ax1.set_ylabel("Intensity (%)")
         ax2.set_ylabel("Position (mm)")
         ax2.grid(visible=False)
 

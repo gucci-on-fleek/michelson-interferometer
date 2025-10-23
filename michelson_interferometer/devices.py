@@ -43,6 +43,8 @@ DETECTOR_NL = "\n"
 
 SLEEP_DURATION = 1 / 60  # seconds
 
+MAX_INTENSITY = 2**16 - 1  # 16-bit detector
+
 
 #########################
 ### Class Definitions ###
@@ -98,6 +100,7 @@ class Motor:
     def stop(self) -> None:
         """Stops the motor."""
         self._queue.put((self._stop, None))
+        self._queue.put((self._set_speed, MOTOR_MAX_SPEED))
 
     def _stop(self, _: None) -> None:
         self._device.stop()
@@ -157,7 +160,7 @@ class Motor:
 class Detector:
     """Controls the light intensity detector."""
 
-    def __init__(self, on_update: Callable[[int], Any]) -> None:
+    def __init__(self, on_update: Callable[[float], Any]) -> None:
         # Initialize the device
         try:
             path = glob(DETECTOR_DEVICE_GLOB)[0]
@@ -172,7 +175,7 @@ class Detector:
 
         # Initialize the variables
         self.on_update = on_update
-        self.data: list[tuple[float, int]] = []
+        self.data: list[tuple[float, float]] = []
 
         # Initialize the thread
         self._lock = Lock()
@@ -198,13 +201,13 @@ class Detector:
             self._device.write(f"det:gain {value}")
 
     @property
-    def intensity(self) -> int:
+    def intensity(self) -> float:
         """Gets the current light intensity reading from the detector."""
         with self._lock:
             value = self._device.ask("det:meas?", "int")
 
         assert isinstance(value, int)
-        return value
+        return value / MAX_INTENSITY
 
     def _run_thread(self) -> None:
         """Calls the on_update callback with the current intensity."""
