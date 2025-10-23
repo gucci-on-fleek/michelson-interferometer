@@ -13,6 +13,7 @@ SHELL := /usr/bin/bash
 
 # Variables
 VENV := python3 -m venv
+BLUEPRINT_COMPILER := blueprint-compiler
 
 # Default target
 .DEFAULT_GOAL := default
@@ -22,12 +23,9 @@ default:
 
 # Build the GUI files
 %.ui: %.blp
-	blueprint-compiler compile $< --output=$@
+	${BLUEPRINT_COMPILER} compile $< --output=$@
 
 # Create the venv and install dependencies
-.PHONY: _setup-venv
-_setup-venv: .venv/bin/activate
-
 .venv/bin/activate: pyproject.toml
 	# Create the virtual environment and activate it
 	${VENV} ./.venv/
@@ -43,35 +41,24 @@ _setup-venv: .venv/bin/activate
 	touch ./.venv/bin/activate
 
 # Run the GUI
-.PHONY: host-run
-run: _setup-venv michelson_interferometer/main.ui michelson_interferometer/*.py
+.PHONY: run-host
+run-host: .venv/bin/activate michelson_interferometer/main.ui michelson_interferometer/*.py
 	source ./.venv/bin/activate
 	python3 -m michelson_interferometer.gui
 
 # Make sure that Flathub is enabled
-.PHONY: _flatpak-setup-flathub
-_flatpak-setup-flathub: build/.flathub-enabled ;
-
-flatpak/.flathub-enabled:
+build/.flathub-enabled:
 	flatpak --user remote-add --if-not-exists flathub \
 		https://dl.flathub.org/repo/flathub.flatpakrepo
-
 	touch $@
 
 # Install the GNOME Flatpak SDK
-.PHONY: _flatpak-setup-sdk
-_flatpak-setup-sdk: build/.gnome-sdk-installed ;
-
-build/.gnome-sdk-installed: _flatpak-setup-flathub
+build/.gnome-sdk-installed: build/.flathub-enabled
 	flatpak --user install --assumeyes org.gnome.Sdk//48
-
 	touch $@
 
 # Download the Python dependencies for the Flatpak build
-.PHONY: _download-flatpak-deps
-_download-flatpak-deps: build/wheels/.all-downloaded ;
-
-build/wheels/.all-downloaded: _flatpak-setup-sdk pyproject.toml
+build/wheels/.all-downloaded: build/.gnome-sdk-installed pyproject.toml
 	# Download all the dependencies
 	flatpak --user run \
 		--devel \
@@ -86,34 +73,46 @@ build/wheels/.all-downloaded: _flatpak-setup-sdk pyproject.toml
 			--dest=./build/wheels/ \
 			"."
 
-# Build the Flatpak repository
-.PHONY: _build-flatpak-repo
-_build-flatpak-repo: build/repo/refs/heads/app/ca.maxchernoff.michelson_interferometer/x86_64/master ;
+	touch $@
 
-build/repo/refs/heads/app/ca.maxchernoff.michelson_interferometer/x86_64/master:
-	_flatpak-setup-flathub \
-	_download-flatpak-deps \
+
+# Build the Flatpak repository
+build/repo/refs/heads/app/ca.maxchernoff.michelson_interferometer/x86_64/master: \
+	build/.flathub-enabled \
+	build/wheels/.all-downloaded \
 	flatpak/ca.maxchernoff.michelson_interferometer.yaml \
 	# (end of prerequisites)
 
 	# Build the Flatpak
 	flatpak-builder --user \
 		--install-deps-from=flathub \
-		--repo=./build/flatpak/ \
+		--repo=./build/repo/ \
 		--state-dir=./build/state/ \
 		--force-clean \
 		--install \
-		./build/flatpak/
+		./build/flatpak/ \
 		./flatpak/ca.maxchernoff.michelson_interferometer.yaml
 
 # Bundle the Flatpak into a single file
 .PHONY: build-flatpak
 build-flatpak: build/ca.maxchernoff.michelson_interferometer.flatpak ;
 
-build/ca.maxchernoff.michelson_interferometer.flatpak: _build-flatpak-repo
+build/ca.maxchernoff.michelson_interferometer.flatpak: \
+	build/repo/refs/heads/app/ca.maxchernoff.michelson_interferometer/x86_64/master
+	# (end of prerequisites)
+
 	# Create the Flatpak bundle
-	flatpak --user build-bundle \
+	flatpak build-bundle \
 		./build/repo/ \
-		./build/ca.maxchernoff.michelson_interferometer.flatpak
+		./build/ca.maxchernoff.michelson_interferometer.flatpak \
 		"ca.maxchernoff.michelson_interferometer"
 
+# Run the Flatpak
+.PHONY: run-flatpak
+run-flatpak:
+	make BLUEPRINT_COMPILER="flatpak run \
+		--command=blueprint-compiler ca.maxchernoff.michelson_interferometer" \
+		michelson_interferometer/main.ui
+
+	flatpak run ca.maxchernoff.michelson_interferometer \
+		-m michelson_interferometer.gui

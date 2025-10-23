@@ -6,13 +6,38 @@ sdk: org.gnome.Sdk
 command: /usr/bin/python3.12
 
 modules:
-  - name: python3
-    buildsystem: simple
-    build-commands:
-      - pip3 install --prefix=/app --no-build-isolation --no-deps . ./wheels/*
+  - name: libusb
+    buildsystem: autotools
+    config-opts:
+      - --disable-udev
     sources:
-      - type: dir
-        path: ".."
+      - type: git
+        url: https://github.com/libusb/libusb.git
+        tag: v1.0.29
+
+  - name: libusb-compat
+    buildsystem: autotools
+    sources:
+      - type: git
+        url: https://github.com/libusb/libusb-compat-0.1.git
+        tag: v0.1.8
+
+  - name: libftdi
+    buildsystem: autotools
+    config-opts:
+      - --disable-libftdipp
+      - --disable-python-binding
+    sources:
+      - type: archive
+        url: https://www.intra2net.com/en/developer/libftdi/download/libftdi-0.20.tar.gz
+        sha256: 3176d5b5986438f33f5208e690a8bfe90941be501cc0a72118ce3d338d4b838e
+
+      - type: patch
+        path: 01_pkgconfig_libusb.diff
+
+      - type: shell
+        commands:
+          - autoreconf -vfi
 
   - name: blueprint-compiler
     buildsystem: meson
@@ -21,18 +46,13 @@ modules:
         url: https://gitlab.gnome.org/GNOME/blueprint-compiler.git
         tag: v0.16.0
 
-  - name: libftdi
-    buildsystem: autotools
-    config-opts: --disable-libftdipp --disable-python-binding
+  - name: python3
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-build-isolation --no-deps . ./build/wheels/*
     sources:
-      - type: archive
-        url: https://www.intra2net.com/en/developer/libftdi/download/libftdi-0.20.tar.gz
-      - type: patch
-        path: 01_pkgconfig_libusb.diff
-      - type: shell
-        commands:
-          - autoreconf -vfi
-
+      - type: dir
+        path: ".."
 
 finish-args:
   # X11
