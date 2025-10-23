@@ -42,8 +42,7 @@ class Plotter:
         resolution: float,
     ) -> None:
         """Configure the matplotlib settings."""
-        plt.rcParams["font.family"] = "STIXGeneral"
-        plt.rcParams["mathtext.fontset"] = "stix"
+        plt.rcParams["font.family"] = "Adwaita Sans"
         plt.rcParams["font.size"] = 10
 
         # Enable the grid
