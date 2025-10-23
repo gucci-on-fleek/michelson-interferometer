@@ -50,7 +50,7 @@ run: _setup-venv michelson_interferometer/main.ui michelson_interferometer/*.py
 
 # Make sure that Flathub is enabled
 .PHONY: _flatpak-setup-flathub
-_flatpak-setup: build/.flathub-enabled ;
+_flatpak-setup-flathub: build/.flathub-enabled ;
 
 flatpak/.flathub-enabled:
 	flatpak --user remote-add --if-not-exists flathub \
@@ -60,7 +60,7 @@ flatpak/.flathub-enabled:
 
 # Install the GNOME Flatpak SDK
 .PHONY: _flatpak-setup-sdk
-_flatpak-setup: build/.gnome-sdk-installed ;
+_flatpak-setup-sdk: build/.gnome-sdk-installed ;
 
 build/.gnome-sdk-installed: _flatpak-setup-flathub
 	flatpak --user install --assumeyes org.gnome.Sdk//48

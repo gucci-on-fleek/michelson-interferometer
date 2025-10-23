@@ -4,9 +4,7 @@
 # SPDX-FileCopyrightText: 2025 Max Chernoff
 
 __pycache__
-.flatpak-builder
 .venv
 *.egg-info
 *.ui
-build/
-build/ca.maxchernoff.michelson_interferometer.flatpak
+build
