@@ -387,6 +387,19 @@ Adw.AboutDialog about_dialog {
     website: "https://github.com/gucci-on-fleek/michelson-interferometer";
 }
 
+Adw.AlertDialog device_error_dialog {
+    heading: "Device Connection Error";
+    body: "An error occurred while trying to connect to the motor or detector. Please ensure that both devices are properly connected and powered on, then restart the application.";
+    default-response: "exit";
+    close-response: "exit";
+
+    responses [
+        Exit: "Exit" destructive,
+    ]
+
+    response => $device_error_dialog_exit();
+}
+
 Adjustment position_adjustment {
     lower: 0;
     upper: 50;

@@ -16,9 +16,11 @@ from time import sleep
 from time import time as unix_time
 from traceback import print_exc
 from typing import Any, Callable
+from warnings import catch_warnings
 
-from pylablib.core.devio.SCPI import SCPIDevice
-from pylablib.devices.Thorlabs import KinesisMotor, ThorlabsError
+with catch_warnings(category=UserWarning, action="ignore"):
+    from pylablib.core.devio.SCPI import SCPIDevice
+    from pylablib.devices.Thorlabs import KinesisMotor
 
 from .utils import start_thread
 
@@ -148,7 +150,7 @@ class Motor:
 
             try:
                 func(arg)  # type: ignore[arg-type]
-            except ThorlabsError:
+            except:
                 print_exc()
 
 
@@ -208,5 +210,12 @@ class Detector:
         """Calls the on_update callback with the current intensity."""
         while True:
             sleep(SLEEP_DURATION)
-            self.data.append((unix_time(), self.intensity))
-            self.on_update(self.intensity)
+
+            try:
+                intensity = self.intensity
+            except:
+                print_exc()
+                continue
+
+            self.data.append((unix_time(), intensity))
+            self.on_update(intensity)

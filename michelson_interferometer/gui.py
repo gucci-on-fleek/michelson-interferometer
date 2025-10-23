@@ -38,7 +38,7 @@ APP_NAME = "Michelson Interferometer"
 APP_ID = "ca.maxchernoff.michelson_interferometer"
 
 UI_PATH = Path(__file__).parent
-PLOT_UPDATE_INTERVAL = 1  # seconds
+PLOT_UPDATE_INTERVAL = 1.0  # seconds
 TSV_HEADER = (
     "motor_time",
     "motor_position",
@@ -73,15 +73,16 @@ class MainWindow(Adw.ApplicationWindow):
     # UI Elements
     about_dialog: Adw.AboutDialog = Gtk.Template.Child()
     detector_value: Gtk.Label = Gtk.Template.Child()
+    device_error_dialog: Adw.AlertDialog = Gtk.Template.Child()
     final_position: Adw.SpinRow = Gtk.Template.Child()
     gain: Adw.SpinRow = Gtk.Template.Child()
     initial_position: Adw.SpinRow = Gtk.Template.Child()
     plot_bin: Adw.Bin = Gtk.Template.Child()
     position: Adw.SpinRow = Gtk.Template.Child()
     save_as: Gtk.FileDialog = Gtk.Template.Child()
+    speed: Adw.SpinRow = Gtk.Template.Child()
     step: Adw.SpinRow = Gtk.Template.Child()
     stop_motion_button: Gtk.Button = Gtk.Template.Child()
-    speed: Adw.SpinRow = Gtk.Template.Child()
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -90,12 +91,18 @@ class MainWindow(Adw.ApplicationWindow):
         self._register_about_action()
 
         # Initialize the devices
-        self.motor = devices.Motor(
-            on_update=lambda value: GLib.idle_add(self.set_position, value)
-        )
-        self.detector = devices.Detector(
-            on_update=lambda value: GLib.idle_add(self.update_detector, value)
-        )
+        try:
+            self.motor = devices.Motor(
+                on_update=lambda value: GLib.idle_add(self.set_position, value)
+            )
+            self.detector = devices.Detector(
+                on_update=lambda value: GLib.idle_add(
+                    self.update_detector, value
+                )
+            )
+        except:
+            self.device_error_dialog.present()
+            raise
 
         # Initialize the plotter
         self._initialize_plotter()
@@ -108,6 +115,13 @@ class MainWindow(Adw.ApplicationWindow):
 
         # Update the gain
         self.gain_changed(self.gain)
+
+    @Gtk.Template.Callback()
+    def device_error_dialog_exit(self, *_) -> None:
+        """Quit the application."""
+        application = self.get_application()
+        assert application is not None
+        application.quit()
 
     def _register_about_action(self) -> None:
         """Register the "about" action."""
