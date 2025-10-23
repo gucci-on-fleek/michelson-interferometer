@@ -120,7 +120,7 @@ class Plotter:
         try:
             ax1.plot(
                 detector_data[:, 0] - detector_data[0, 0],
-                detector_data[:, 1],
+                detector_data[:, 1] * 100,
                 ".C0",
                 label="Detector",
             )
