@@ -8,7 +8,5 @@ __pycache__
 .venv
 *.egg-info
 *.ui
-build
-ca.maxchernoff.michelson_interferometer.flatpak
-repo
-wheels
+build/
+build/ca.maxchernoff.michelson_interferometer.flatpak

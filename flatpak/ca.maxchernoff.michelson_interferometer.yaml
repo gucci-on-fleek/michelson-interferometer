@@ -12,7 +12,23 @@ modules:
       - pip3 install --prefix=/app --no-build-isolation --no-deps . ./wheels/*
     sources:
       - type: dir
-        path: ..
+        path: ".."
+
+  - name: blueprint-compiler
+    buildsystem: meson
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/blueprint-compiler.git
+        tag: v0.16.0
+
+  - name: libftdi
+    buildsystem: autotools
+    config-opts: --disable-libftdipp --disable-python-binding
+    sources:
+      - type: archive
+        url: https://www.intra2net.com/en/developer/libftdi/download/libftdi-0.20.tar.gz
+      - type: patch
+        path: 01_pkgconfig_libusb.diff
 
 finish-args:
   # X11
