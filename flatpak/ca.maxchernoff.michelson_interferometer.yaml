@@ -29,6 +29,10 @@ modules:
         url: https://www.intra2net.com/en/developer/libftdi/download/libftdi-0.20.tar.gz
       - type: patch
         path: 01_pkgconfig_libusb.diff
+      - type: shell
+        commands:
+          - autoreconf -vfi
+
 
 finish-args:
   # X11
