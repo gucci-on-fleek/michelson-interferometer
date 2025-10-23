@@ -79,8 +79,8 @@ class Plotter:
         # Set the colour cycle
         plt.rcParams["axes.prop_cycle"] = cycler(
             color=(
-                get_colour("blue_1" if dark_mode else "blue_5"),
-                get_colour("orange_1" if dark_mode else "orange_5"),
+                get_colour("blue_2" if dark_mode else "blue_4"),
+                get_colour("orange_2" if dark_mode else "orange_4"),
             ),
         )
 
