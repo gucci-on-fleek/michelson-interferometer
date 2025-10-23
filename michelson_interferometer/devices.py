@@ -62,6 +62,7 @@ class Motor:
         self.on_update = on_update
         self.data: list[tuple[float, float]] = []
         self._thread = start_thread(self._run_thread)
+        self._current_speed = MOTOR_MAX_SPEED
         self._queue: Queue[
             tuple[Callable[[float], None], float]
             | tuple[Callable[[None], None], None]
@@ -100,7 +101,7 @@ class Motor:
             sleep(2 * SLEEP_DURATION)
             return self.data[-1][1]
 
-    def _get_position(self) -> None:
+    def _get_position(self, _: None) -> None:
         """Gets the current position of the mirror and calls on_update."""
         position = self._device.get_position()
         self.data.append((unix_time(), position))
@@ -110,6 +111,8 @@ class Motor:
         self, position: float, speed: float = MOTOR_MAX_SPEED
     ) -> None:
         """Sets the position of the mirror in millimeters at a given speed."""
+        if speed != self._current_speed:
+            self._queue.put((self._set_speed, speed))
         self._queue.put((self._set_position, position))
 
     def _set_position(self, position: float) -> None:
@@ -118,6 +121,7 @@ class Motor:
     def _set_speed(self, speed: float) -> None:
         """Sets the speed of the motor in millimeters/second."""
         self._device.setup_velocity(max_velocity=speed, scale=True)
+        self._current_speed = speed
 
     def _run_thread(self) -> None:
         """Runs the thread."""
