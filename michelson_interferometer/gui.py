@@ -145,12 +145,14 @@ class MainWindow(Adw.ApplicationWindow):
         adw_style = Adw.StyleManager.get_default()
         font_and_size: str = adw_style.get_document_font_name()  # type: ignore
         font, size = font_and_size.rsplit(" ", 1)
+        dark_mode = adw_style.get_dark()
 
         self.plotter = utils.Plotter(
             resolution=resolution,
             get_colour=self._get_colour,
             font_name=font,
             font_size=int(size),
+            dark_mode=dark_mode,
         )
         utils.start_thread(self._plot_thread)
 

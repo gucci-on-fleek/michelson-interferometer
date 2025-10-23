@@ -51,6 +51,7 @@ class Plotter:
         get_colour: Callable[[str], RGBAColour],
         font_name: str,
         font_size: int,
+        dark_mode: bool,
     ) -> None:
         """Configure the matplotlib settings."""
         # Fonts
@@ -77,7 +78,10 @@ class Plotter:
 
         # Set the colour cycle
         plt.rcParams["axes.prop_cycle"] = cycler(
-            color=(get_colour("blue_3"), get_colour("orange_3")),
+            color=(
+                get_colour("blue_1" if dark_mode else "blue_5"),
+                get_colour("orange_1" if dark_mode else "orange_5"),
+            ),
         )
 
         # Layout
