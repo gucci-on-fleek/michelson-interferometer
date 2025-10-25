@@ -14,6 +14,7 @@ from pathlib import Path
 from threading import Thread
 from time import sleep
 from warnings import catch_warnings
+from itertools import zip_longest
 
 import numpy as np
 from matplotlib.backends.backend_gtk4agg import (
@@ -327,7 +328,7 @@ class MainWindow(Adw.ApplicationWindow):
             for (motor_time, motor_position), (
                 detector_time,
                 detector_intensity,
-            ) in zip(self.motor.data, self.detector.data):
+            ) in zip_longest(self.motor.data, self.detector.data):
                 writer.writerow(
                     (
                         motor_time,
