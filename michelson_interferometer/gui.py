@@ -10,11 +10,10 @@
 import sys
 from csv import excel_tab
 from csv import writer as csv_writer
+from itertools import zip_longest
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from warnings import catch_warnings
-from itertools import zip_longest
 
 import numpy as np
 from matplotlib.backends.backend_gtk4agg import (
@@ -29,7 +28,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Adw, Gio, GLib, Gtk  # type: ignore
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # type: ignore
 
 #################
 ### Constants ###
@@ -139,32 +138,10 @@ class MainWindow(Adw.ApplicationWindow):
         )
         self.add_action(action)
 
-    def _get_colour(self, colour_name: str) -> utils.RGBAColour:
-        """Gets the RGBA tuple for a given colour name from the theme."""
-        with catch_warnings(category=DeprecationWarning, action="ignore"):
-            style = self.get_style_context()
-            gdk_colour = style.lookup_color(colour_name)[1]
-
-        return (
-            gdk_colour.red,
-            gdk_colour.green,
-            gdk_colour.blue,
-            gdk_colour.alpha,
-        )
-
     def _initialize_plotter(self) -> None:
         """Initialize the plotter."""
-        adw_style = Adw.StyleManager.get_default()
-        font_and_size: str = adw_style.get_document_font_name()  # type: ignore
-        font, size = font_and_size.rsplit(" ", 1)
-        dark_mode = adw_style.get_dark()
-
-        self.plotter = utils.Plotter(
-            get_colour=self._get_colour,
-            font_name=font,
-            font_size=int(size),
-            dark_mode=dark_mode,
-        )
+        # Create the plotter
+        self.plotter = utils.Plotter(window=self)
         utils.start_thread(self._plot_thread)
 
     def _plot_thread(self) -> None:

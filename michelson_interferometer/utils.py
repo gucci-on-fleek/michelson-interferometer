@@ -15,15 +15,30 @@ import numpy as np
 from matplotlib.backends.backend_gtk4cairo import (
     FigureCanvasGTK4Cairo as FigureCanvas,
 )
-
 from matplotlib.figure import Figure
 from matplotlib.rcsetup import cycler
+
+# GTK imports
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+
+from gi.repository import Adw, Gdk, Gtk  # type: ignore
 
 ########################
 ### Type Definitions ###
 ########################
 
 type RGBAColour = tuple[float, float, float, float]
+
+
+#################
+### Constants ###
+#################
+
+TRANSPARENT_COLOUR: RGBAColour = (0.0, 0.0, 0.0, 0.0)
+PLOT_COLOUR_NAMES = ("BLUE", "ORANGE")
 
 
 ############################
@@ -40,38 +55,78 @@ def start_thread(func: Callable, *args) -> Thread:
     return thread
 
 
+def gdk_colour_to_tuple(gdk_colour: Gdk.RGBA) -> RGBAColour:
+    """Gets the RGBA tuple for a GDK colour."""
+
+    return (
+        gdk_colour.red,
+        gdk_colour.green,
+        gdk_colour.blue,
+        gdk_colour.alpha,
+    )
+
+
 #########################
 ### Class Definitions ###
 #########################
 
 
 class Plotter:
-    def __init__(
-        self,
-        get_colour: Callable[[str], RGBAColour],
-        font_name: str,
-        font_size: int,
-        dark_mode: bool,
-    ) -> None:
+    def __init__(self, window: Adw.ApplicationWindow) -> None:
         """Configure the matplotlib settings."""
-        # Fonts
-        plt.rcParams["font.family"] = font_name
-        plt.rcParams["font.size"] = font_size
 
-        # Background colours
-        bg = get_colour("window_bg_color")
-        plt.rcParams["figure.facecolor"] = bg
-        plt.rcParams["axes.facecolor"] = bg
-        plt.rcParams["figure.edgecolor"] = bg
+        self._set_font()
+        self._set_background_colour()
+        self._set_foreground_colour(window)
+        self._set_grid()
+        self._set_plot_colours()
 
-        # Foreground colours
-        fg = get_colour("window_fg_color")
-        plt.rcParams["axes.edgecolor"] = fg
-        plt.rcParams["text.color"] = fg
-        plt.rcParams["axes.labelcolor"] = fg
-        plt.rcParams["xtick.color"] = fg
-        plt.rcParams["ytick.color"] = fg
+        # Use a sensible layout rather than the horrible default
+        plt.rcParams["figure.constrained_layout.use"] = True
 
+    def _set_font(self) -> None:
+        """Set the matplotlib font parameters."""
+        # Get the font name and size
+        adw_style = Adw.StyleManager.get_default()
+
+        name_and_size: str = adw_style.get_document_font_name()  # type: ignore
+        name, size = name_and_size.rsplit(" ", 1)
+
+        # Set the font parameters
+        plt.rcParams["font.family"] = name
+        plt.rcParams["font.size"] = int(size)
+
+    def _set_background_colour(self) -> None:
+        """Set the background colour of the matplotlib plots."""
+        # Set the background of the matplotlib canvas to be transparent
+        css = Gtk.CssProvider()
+        css.load_from_string(
+            ".matplotlib-canvas { background-color: transparent; }"
+        )
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),  # type: ignore
+            css,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+        )
+
+        # Set the figure and axes backgrounds to be transparent
+        plt.rcParams["figure.facecolor"] = TRANSPARENT_COLOUR
+        plt.rcParams["axes.facecolor"] = TRANSPARENT_COLOUR
+
+    def _set_foreground_colour(self, window: Adw.ApplicationWindow) -> None:
+        """Set the foreground colour of the matplotlib plots."""
+        # Get the text colour
+        text_colour = gdk_colour_to_tuple(window.get_color())
+
+        # Set the colours
+        plt.rcParams["axes.edgecolor"] = text_colour
+        plt.rcParams["text.color"] = text_colour
+        plt.rcParams["axes.labelcolor"] = text_colour
+        plt.rcParams["xtick.color"] = text_colour
+        plt.rcParams["ytick.color"] = text_colour
+
+    def _set_grid(self) -> None:
+        """Set the grid parameters."""
         # Frame
         plt.rcParams["axes.spines.bottom"] = True
         plt.rcParams["axes.spines.left"] = True
@@ -94,16 +149,23 @@ class Plotter:
         plt.rcParams["xtick.minor.visible"] = True
         plt.rcParams["ytick.minor.visible"] = True
 
-        # Set the colour cycle
-        plt.rcParams["axes.prop_cycle"] = cycler(
-            color=(
-                get_colour("blue_2" if dark_mode else "blue_4"),
-                get_colour("orange_2" if dark_mode else "orange_4"),
-            ),
-        )
+    def _set_plot_colours(self) -> None:
+        """Set the plot colours based on the current theme."""
+        # See if dark mode is enabled or not
+        adw_style = Adw.StyleManager.get_default()
+        dark_mode = adw_style.get_dark()
 
-        # Layout
-        plt.rcParams["figure.constrained_layout.use"] = True
+        # Get the plot colours
+        plot_colours: list[RGBAColour] = []
+        for colour_name in PLOT_COLOUR_NAMES:
+            colour_enum = getattr(Adw.AccentColor, colour_name)  # type: ignore
+            gdk_colour: Gdk.RGBA = Adw.AccentColor.to_standalone_rgba(  # type: ignore
+                colour_enum, dark_mode
+            )
+            plot_colours.append(gdk_colour_to_tuple(gdk_colour))
+
+        plt.rcParams["axes.prop_cycle"] = cycler(color=plot_colours)
+        print(plot_colours)
 
     def draw_plot(
         self,
@@ -141,7 +203,11 @@ class Plotter:
             return None
 
         # Add the legends
-        figure.legend(loc="outside upper right")
+        legend = figure.legend(loc="outside upper right")
+
+        # Ugh, we can't set this properly via rcParams
+        legend.get_frame().set_alpha(None)
+        legend.get_frame().set_facecolor(TRANSPARENT_COLOUR)
 
         # Return the canvas
         return FigureCanvas(figure)
