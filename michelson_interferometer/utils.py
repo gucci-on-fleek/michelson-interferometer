@@ -72,9 +72,11 @@ def gdk_colour_to_tuple(gdk_colour: Gdk.RGBA) -> RGBAColour:
 
 
 class Plotter:
+    """Class to handle matplotlib plotting in the GUI."""
+
     def __init__(self, window: Adw.ApplicationWindow) -> None:
         """Configure the matplotlib settings."""
-
+        # Set the matplotlib parameters
         self._set_font()
         self._set_background_colour()
         self._set_foreground_colour(window)
@@ -83,6 +85,10 @@ class Plotter:
 
         # Use a sensible layout rather than the horrible default
         plt.rcParams["figure.constrained_layout.use"] = True
+
+        # Variables
+        self.figure = Figure()
+        self.canvas = FigureCanvas(self.figure)
 
     def _set_font(self) -> None:
         """Set the matplotlib font parameters."""
@@ -165,49 +171,59 @@ class Plotter:
             plot_colours.append(gdk_colour_to_tuple(gdk_colour))
 
         plt.rcParams["axes.prop_cycle"] = cycler(color=plot_colours)
-        print(plot_colours)
 
-    def draw_plot(
+    def draw_data(
         self,
         detector_data: np.ndarray,
         motor_data: np.ndarray,
-    ) -> FigureCanvas | None:
-        """Draw the plot and return a FigureCanvas."""
-
-        # Create the figure and axes
-        figure = Figure()
-        ax1 = figure.add_subplot()
-        ax2 = ax1.twinx()
+    ) -> None:
+        """Draw the data on the figure."""
+        # Create the axes
+        intensity_axis = self.figure.add_subplot()
+        position_axis = intensity_axis.twinx()
 
         # Set the display settings
-        ax1.set_xlabel("Time (s)")
-        ax1.set_ylabel("Intensity (%)")
-        ax2.set_ylabel("Position (mm)")
-        ax2.grid(visible=False)
+        intensity_axis.set_xlabel("Time (s)")
+        intensity_axis.set_ylabel("Intensity (%)")
+        position_axis.set_ylabel("Position (mm)")
+        position_axis.grid(visible=False)
 
         # Plot the data
         try:
-            ax1.plot(
+            intensity_axis.plot(
                 detector_data[:, 0] - detector_data[0, 0],
                 detector_data[:, 1] * 100,
                 ".C0",
                 label="Detector",
             )
-            ax2.plot(
+            position_axis.plot(
                 motor_data[:, 0] - motor_data[0, 0],
                 motor_data[:, 1],
                 ".C1",
                 label="Mirror",
             )
         except IndexError:
-            return None
+            pass
+
+    def draw_plot(
+        self,
+        detector_data: np.ndarray,
+        motor_data: np.ndarray,
+    ) -> None:
+        """Redraw the plot with the given data."""
+
+        # Create the figure and axes
+        self.figure.clear(keep_observers=True)
+
+        # Draw the data
+        self.draw_data(detector_data, motor_data)
 
         # Add the legends
-        legend = figure.legend(loc="outside upper right")
+        legend = self.figure.legend(loc="outside upper right")
 
         # Ugh, we can't set this properly via rcParams
         legend.get_frame().set_alpha(None)
         legend.get_frame().set_facecolor(TRANSPARENT_COLOUR)
 
-        # Return the canvas
-        return FigureCanvas(figure)
+        # Redraw the canvas
+        self.canvas.draw()

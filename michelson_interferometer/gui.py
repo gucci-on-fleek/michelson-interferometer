@@ -142,23 +142,17 @@ class MainWindow(Adw.ApplicationWindow):
         """Initialize the plotter."""
         # Create the plotter
         self.plotter = utils.Plotter(window=self)
+        self.plot_bin.set_child(self.plotter.canvas)
         utils.start_thread(self._plot_thread)
 
     def _plot_thread(self) -> None:
         """Thread that continuously updates the plot."""
         while True:
             sleep(PLOT_UPDATE_INTERVAL)
-            figure = self.plotter.draw_plot(
+            self.plotter.draw_plot(
                 np.array(self.detector.data),
                 np.array(self.motor.data),
             )
-
-            if figure is not None:
-                GLib.idle_add(self.render_plot, figure)
-
-    def render_plot(self, canvas: FigureCanvas) -> None:
-        """Render the plot in the GUI, from the main thread."""
-        self.plot_bin.set_child(canvas)
 
     def _initialize_position_adjustment(self) -> None:
         """Initialize the position adjustment."""
