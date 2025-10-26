@@ -18,7 +18,7 @@ from traceback import print_exc
 from typing import TYPE_CHECKING, Any, Callable
 from warnings import catch_warnings
 
-with catch_warnings(category=UserWarning, action="ignore"):
+with catch_warnings(category=UserWarning, action="ignore", lineno=10):
     from pylablib.core.devio.SCPI import SCPIDevice
     from pylablib.devices.Thorlabs import KinesisMotor
 
