@@ -88,6 +88,10 @@ class MainWindow(Adw.ApplicationWindow):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
+        # Style the window if we're testing
+        if devices.fake_devices:
+            self.add_css_class("devel")
+
         # Register the "about" action
         self._register_about_action()
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Michelson Interferometer Control Software
 # https://github.com/gucci-on-fleek/michelson-interferometer
 # SPDX-License-Identifier: MPL-2.0+
@@ -10,12 +9,13 @@
 
 from glob import glob
 from itertools import cycle
+from os import environ
 from queue import Empty, Queue
 from threading import Lock
 from time import sleep
 from time import time as unix_time
 from traceback import print_exc
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 from warnings import catch_warnings
 
 with catch_warnings(category=UserWarning, action="ignore"):
@@ -33,7 +33,7 @@ DETECTOR_DEVICE_GLOB = "/dev/ttyACM?"
 
 # For a KBD101/DDSM50 controller, from Thorlabs documentation:
 #     https://www.thorlabs.com/Software/Motion%20Control/APT_Communications_Protocol.pdf
-MOTOR_SCALE = (2_000, 13_421.77, 1.374)
+MOTOR_SCALE = (2_000.0, 13_421.77, 1.374)
 MOTOR_MAX_POS = 50.0  # millimeters
 MOTOR_MAX_SPEED = 100.0  # millimeters/second
 
@@ -44,6 +44,22 @@ DETECTOR_NL = "\n"
 SLEEP_DURATION = 1 / 60  # seconds
 
 MAX_INTENSITY = 2**16 - 1  # 16-bit detector
+
+
+######################
+### Initialization ###
+######################
+
+# Fake devices for testing
+if (not TYPE_CHECKING) and ("MI_FAKE_DEVICES" in environ):
+    from .devices_mock import SCPIDevice, KinesisMotor
+
+    MOTOR_DEVICE_GLOB = "/dev/null"
+    DETECTOR_DEVICE_GLOB = "/dev/null"
+
+    fake_devices = True
+else:
+    fake_devices = False
 
 
 #########################
