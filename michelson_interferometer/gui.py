@@ -39,7 +39,7 @@ APP_NAME = "Michelson Interferometer"
 APP_ID = "ca.maxchernoff.michelson_interferometer"
 
 UI_PATH = Path(__file__).parent
-PLOT_UPDATE_INTERVAL = 5.0  # seconds
+PLOT_UPDATE_INTERVAL = 1.0  # seconds
 TSV_HEADER = (
     "motor_time",
     "motor_position",
@@ -139,12 +139,6 @@ class MainWindow(Adw.ApplicationWindow):
         )
         self.add_action(action)
 
-    def _get_resolution(self) -> float:
-        """Initialize the display resolution."""
-        display = self.get_display()
-        screen = display.get_monitors()[0]
-        return screen.get_scale() * 96  # type: ignore
-
     def _get_colour(self, colour_name: str) -> utils.RGBAColour:
         """Gets the RGBA tuple for a given colour name from the theme."""
         with catch_warnings(category=DeprecationWarning, action="ignore"):
@@ -160,17 +154,12 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _initialize_plotter(self) -> None:
         """Initialize the plotter."""
-        resolution = self._get_resolution()
-        self.plot_width = 200
-        self.plot_height = 200
-
         adw_style = Adw.StyleManager.get_default()
         font_and_size: str = adw_style.get_document_font_name()  # type: ignore
         font, size = font_and_size.rsplit(" ", 1)
         dark_mode = adw_style.get_dark()
 
         self.plotter = utils.Plotter(
-            resolution=resolution,
             get_colour=self._get_colour,
             font_name=font,
             font_size=int(size),
@@ -183,8 +172,6 @@ class MainWindow(Adw.ApplicationWindow):
         while True:
             sleep(PLOT_UPDATE_INTERVAL)
             figure = self.plotter.draw_plot(
-                self.plot_width,
-                self.plot_height,
                 np.array(self.detector.data),
                 np.array(self.motor.data),
             )
@@ -195,9 +182,6 @@ class MainWindow(Adw.ApplicationWindow):
     def render_plot(self, canvas: FigureCanvas) -> None:
         """Render the plot in the GUI, from the main thread."""
         self.plot_bin.set_child(canvas)
-
-        self.plot_width = self.plot_bin.get_width()
-        self.plot_height = self.plot_bin.get_height()
 
     def _initialize_position_adjustment(self) -> None:
         """Initialize the position adjustment."""

@@ -12,9 +12,10 @@ from typing import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.backends.backend_gtk4agg import (
-    FigureCanvasGTK4Agg as FigureCanvas,
+from matplotlib.backends.backend_gtk4cairo import (
+    FigureCanvasGTK4Cairo as FigureCanvas,
 )
+
 from matplotlib.figure import Figure
 from matplotlib.rcsetup import cycler
 
@@ -47,7 +48,6 @@ def start_thread(func: Callable, *args) -> Thread:
 class Plotter:
     def __init__(
         self,
-        resolution: float,
         get_colour: Callable[[str], RGBAColour],
         font_name: str,
         font_size: int,
@@ -72,9 +72,27 @@ class Plotter:
         plt.rcParams["xtick.color"] = fg
         plt.rcParams["ytick.color"] = fg
 
+        # Frame
+        plt.rcParams["axes.spines.bottom"] = True
+        plt.rcParams["axes.spines.left"] = True
+        plt.rcParams["axes.spines.right"] = True
+        plt.rcParams["axes.spines.top"] = False
+
         # Enable the grid
         plt.rcParams["axes.grid"] = True
         plt.rcParams["axes.grid.which"] = "major"
+        plt.rcParams["grid.alpha"] = 0.4
+
+        # Ticks
+        plt.rcParams["xtick.bottom"] = True
+        plt.rcParams["ytick.left"] = True
+        plt.rcParams["ytick.right"] = True
+        plt.rcParams["xtick.top"] = False
+
+        plt.rcParams["xtick.direction"] = "in"
+        plt.rcParams["ytick.direction"] = "in"
+        plt.rcParams["xtick.minor.visible"] = True
+        plt.rcParams["ytick.minor.visible"] = True
 
         # Set the colour cycle
         plt.rcParams["axes.prop_cycle"] = cycler(
@@ -87,26 +105,15 @@ class Plotter:
         # Layout
         plt.rcParams["figure.constrained_layout.use"] = True
 
-        # Set the variables
-        self.resolution = resolution
-
     def draw_plot(
         self,
-        width: int,
-        height: int,
         detector_data: np.ndarray,
         motor_data: np.ndarray,
     ) -> FigureCanvas | None:
         """Draw the plot and return a FigureCanvas."""
 
         # Create the figure and axes
-        figure = Figure(
-            figsize=(
-                10 * width / self.resolution,
-                10 * height / self.resolution,
-            ),
-            dpi=self.resolution,
-        )
+        figure = Figure()
         ax1 = figure.add_subplot()
         ax2 = ax1.twinx()
 
