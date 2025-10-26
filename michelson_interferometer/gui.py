@@ -39,7 +39,7 @@ APP_NAME = "Michelson Interferometer"
 APP_ID = "ca.maxchernoff.michelson_interferometer"
 
 UI_PATH = Path(__file__).parent
-PLOT_UPDATE_INTERVAL = 1.0  # seconds
+PLOT_UPDATE_INTERVAL = 5.0  # seconds
 TSV_HEADER = (
     "motor_time",
     "motor_position",
@@ -73,12 +73,12 @@ class MainWindow(Adw.ApplicationWindow):
 
     # UI Elements
     about_dialog: Adw.AboutDialog = Gtk.Template.Child()
-    detector_value: Gtk.Label = Gtk.Template.Child()
     device_error_dialog: Adw.AlertDialog = Gtk.Template.Child()
     final_position: Adw.SpinRow = Gtk.Template.Child()
     gain: Adw.SpinRow = Gtk.Template.Child()
     initial_position: Adw.SpinRow = Gtk.Template.Child()
     plot_bin: Adw.Bin = Gtk.Template.Child()
+    position_group: Adw.PreferencesGroup = Gtk.Template.Child()
     position: Adw.SpinRow = Gtk.Template.Child()
     save_as: Gtk.FileDialog = Gtk.Template.Child()
     speed: Adw.SpinRow = Gtk.Template.Child()
@@ -111,6 +111,9 @@ class MainWindow(Adw.ApplicationWindow):
 
         # Initialize the plotter
         self._initialize_plotter()
+
+        # Initialize the position adjustment
+        self._initialize_position_adjustment()
 
         # Initialize variables
         self.current_motion = self.stop_motion_button
@@ -196,18 +199,46 @@ class MainWindow(Adw.ApplicationWindow):
         self.plot_width = self.plot_bin.get_width()
         self.plot_height = self.plot_bin.get_height()
 
+    def _initialize_position_adjustment(self) -> None:
+        """Initialize the position adjustment."""
+        # We need this code so that we don't try and adjust the position while
+        # the user is still interacting with the position widgets.
+        self._future_position: float | None = None
+        self._defer_position_update = False
+
+        gesture = Gtk.GestureClick.new()
+        gesture.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        gesture.connect("pressed", self._on_position_gesture_pressed)
+        gesture.connect("released", self._on_position_gesture_released)
+        self.position_group.add_controller(gesture)
+
+    def _on_position_gesture_pressed(self, *_) -> None:
+        """Handle the user starting to interact with the position widgets."""
+        self._defer_position_update = True
+
+    def _on_position_gesture_released(self, *_) -> None:
+        """Handle the user finishing interaction with the position widgets."""
+        self._defer_position_update = False
+        if self._future_position is not None:
+            self.motor.set_position(self._future_position)
+            self._future_position = None
+
     def set_position(self, value: float) -> None:
         """Set the position spinner value."""
         self.ignore_position_changes = True
-        self.position.set_value(value)
+        if not self._defer_position_update:
+            self.position.set_value(value)
         self.ignore_position_changes = False
 
     @Gtk.Template.Callback()
-    def position_changed(self, spinner: Adw.SpinRow) -> None:
+    def position_changed(self, scale: Gtk.Scale) -> None:
         """Handle changes to the position spinner."""
         if not self.ignore_position_changes:
-            value = spinner.get_value()
-            self.motor.set_position(value)
+            if self._defer_position_update:
+                self._future_position = scale.get_value()
+            else:
+                value = scale.get_value()
+                self.motor.set_position(value)
 
     @Gtk.Template.Callback()
     def gain_changed(self, spinner: Adw.SpinRow) -> None:
@@ -350,7 +381,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def update_detector(self, value: int) -> None:
         """Callback function to update the detector value display."""
-        self.detector_value.set_label(f"{value * 100:7.03f}%")
+        pass
 
 
 ###################

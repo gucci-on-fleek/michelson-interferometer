@@ -9,12 +9,15 @@
 
 from typing import Any
 from random import randint
+from time import sleep
 
 #################
 ### Constants ###
 #################
 
 MAX_INTENSITY = 2**16 - 1  # 16-bit detector
+SHORT_SLEEP = 1 / 120  # seconds
+LONG_SLEEP = 1 / 6  # seconds
 
 #########################
 ### Class Definitions ###
@@ -31,26 +34,33 @@ class KinesisMotor:
 
     def wait_for_stop(self) -> None:
         print("(KinesisMotor) wait_for_stop()")
+        sleep(LONG_SLEEP)
 
     def _enable_channel(self, enabled: bool) -> None:
         print(f"(KinesisMotor) _enable_channel({enabled!r})")
+        sleep(SHORT_SLEEP)
 
     def home(self, force: bool, sync: bool) -> None:
         print(f"(KinesisMotor) home({force!r}, {sync!r})")
+        sleep(SHORT_SLEEP)
 
     def stop(self) -> None:
         print("(KinesisMotor) stop()")
+        sleep(SHORT_SLEEP)
 
     def get_position(self) -> float:
         # print("(KinesisMotor) get_position() -> {self._position!r}")  # Too noisy
+        sleep(SHORT_SLEEP)
         return self._position
 
     def move_to(self, position: float) -> None:
         print(f"(KinesisMotor) move_to({position!r})")
+        sleep(SHORT_SLEEP)
         self._position = position
 
     def setup_velocity(self, max_velocity: float, scale: bool) -> None:
         print(f"(KinesisMotor) setup_velocity({max_velocity!r}, {scale!r})")
+        sleep(SHORT_SLEEP)
         self._speed = max_velocity
 
 
@@ -66,6 +76,7 @@ class SCPIDevice:
 
     def get_id(self) -> str:
         print('(SCPIDevice) get_idn() -> "MOCK_DEVICE,MODEL_1234,SN0001,1.0"')
+        sleep(SHORT_SLEEP)
         return "MOCK_DEVICE,MODEL_1234,SN0001,1.0"
 
     def ask(self, command: str, datatype: str) -> Any:
@@ -78,10 +89,12 @@ class SCPIDevice:
                 raise ValueError(f"Unknown command: {command!r}")
 
         # print(f"(SCPIDevice) ask({command!r}, {datatype!r}) -> {value!r}")  # Too noisy
+        sleep(SHORT_SLEEP)
         return value
 
     def write(self, command: str) -> None:
         print(f"(SCPIDevice) write({command!r})")
+        sleep(SHORT_SLEEP)
         match command.split():
             case ["det:gain", value]:
                 self._gain = int(value)

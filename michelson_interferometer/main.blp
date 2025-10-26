@@ -30,14 +30,14 @@ template $MainWindow: Adw.ApplicationWindow {
             Adw.PreferencesPage {
                 title: "Settings";
 
-                Adw.PreferencesGroup {
+                Adw.PreferencesGroup position_group {
                     title: "Mirror Position";
 
                     Adw.SpinRow position {
-                        changed => $position_changed();
                         title: "Current Position";
                         adjustment: position_adjustment;
                         snap-to-ticks: true;
+                        numeric: true;
                         digits: 3;
 
                         [suffix]
@@ -56,6 +56,7 @@ template $MainWindow: Adw.ApplicationWindow {
                             margin-bottom: 6;
 
                             Scale {
+                                value-changed => $position_changed();
                                 orientation: horizontal;
                                 hexpand: true;
                                 adjustment: position_adjustment;
@@ -78,6 +79,7 @@ template $MainWindow: Adw.ApplicationWindow {
                         changed => $gain_changed();
                         digits: 0;
                         snap-to-ticks: true;
+                        numeric: true;
                         title: "Gain";
 
                         adjustment: Adjustment {
@@ -95,7 +97,8 @@ template $MainWindow: Adw.ApplicationWindow {
 
                     Adw.SpinRow initial_position {
                         title: "Initial Position";
-                        snap-to-ticks: true;
+                        snap-to-ticks: false;
+                        numeric: true;
 
                         adjustment: Adjustment {
                             lower: 0;
@@ -115,7 +118,8 @@ template $MainWindow: Adw.ApplicationWindow {
 
                     Adw.SpinRow final_position {
                         title: "Final Position";
-                        snap-to-ticks: true;
+                        snap-to-ticks: false;
+                        numeric: true;
 
                         adjustment: Adjustment {
                             lower: 0;
@@ -135,13 +139,14 @@ template $MainWindow: Adw.ApplicationWindow {
 
                     Adw.SpinRow step {
                         title: "Step Size";
-                        snap-to-ticks: true;
+                        snap-to-ticks: false;
+                        numeric: true;
 
                         adjustment: Adjustment {
                             lower: 0;
                             upper: 50;
                             value: 1;
-                            step-increment: 0.001;
+                            step-increment: 0.010;
                             page-increment: 1;
                         };
 
@@ -155,13 +160,14 @@ template $MainWindow: Adw.ApplicationWindow {
 
                     Adw.SpinRow speed {
                         title: "Speed";
-                        snap-to-ticks: true;
+                        snap-to-ticks: false;
+                        numeric: true;
 
                         adjustment: Adjustment {
                             lower: 0;
                             upper: 100;
                             value: 1;
-                            step-increment: 0.001;
+                            step-increment: 0.100;
                             page-increment: 1;
                         };
 
@@ -333,30 +339,6 @@ template $MainWindow: Adw.ApplicationWindow {
                 margin-end: 12;
                 margin-top: 12;
                 margin-bottom: 12;
-
-                Label {
-                    label: "Detector Value";
-                    halign: start;
-
-                    styles [
-                        "heading",
-                    ]
-                }
-
-                Label detector_value {
-                    styles [
-                        "monospace",
-                    ]
-                }
-
-                Label {
-                    label: "Plot";
-                    halign: start;
-
-                    styles [
-                        "heading",
-                    ]
-                }
 
                 Adw.Bin plot_bin {}
             }
