@@ -77,6 +77,7 @@ class MainWindow(Adw.ApplicationWindow):
     gain: Adw.SpinRow = Gtk.Template.Child()
     initial_position: Adw.SpinRow = Gtk.Template.Child()
     plot_bin: Adw.Bin = Gtk.Template.Child()
+    plot_mode: Adw.ToggleGroup = Gtk.Template.Child()  # type: ignore
     position_group: Adw.PreferencesGroup = Gtk.Template.Child()
     position: Adw.SpinRow = Gtk.Template.Child()
     save_as: Gtk.FileDialog = Gtk.Template.Child()

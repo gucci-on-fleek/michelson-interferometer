@@ -197,6 +197,10 @@ template $MainWindow: Adw.ApplicationWindow {
                                 hexpand: true;
                                 clicked => $go_to_initial();
 
+                                styles [
+                                    "raised",
+                                ]
+
                                 Image {
                                     icon-name: "media-skip-backward-symbolic";
                                 }
@@ -205,6 +209,10 @@ template $MainWindow: Adw.ApplicationWindow {
                             Button run_backwards {
                                 hexpand: true;
                                 clicked => $run_backwards();
+
+                                styles [
+                                    "raised",
+                                ]
 
                                 Image {
                                     icon-name: "media-seek-backward-symbolic";
@@ -215,8 +223,12 @@ template $MainWindow: Adw.ApplicationWindow {
                                 hexpand: true;
                                 clicked => $step_backwards();
 
+                                styles [
+                                    "raised",
+                                ]
+
                                 Image {
-                                    icon-name: "go-previous-symbolic";
+                                    icon-name: "left-small-symbolic";
                                 }
                             }
 
@@ -232,6 +244,7 @@ template $MainWindow: Adw.ApplicationWindow {
 
                                 styles [
                                     "suggested-action",
+                                    "raised",
                                 ]
 
                                 Image {
@@ -249,14 +262,22 @@ template $MainWindow: Adw.ApplicationWindow {
                                 hexpand: true;
                                 clicked => $step_forwards();
 
+                                styles [
+                                    "raised",
+                                ]
+
                                 Image {
-                                    icon-name: "go-next-symbolic";
+                                    icon-name: "right-small-symbolic";
                                 }
                             }
 
                             Button run_forwards {
                                 hexpand: true;
                                 clicked => $run_forwards();
+
+                                styles [
+                                    "raised",
+                                ]
 
                                 Image {
                                     icon-name: "media-seek-forward-symbolic";
@@ -266,6 +287,10 @@ template $MainWindow: Adw.ApplicationWindow {
                             Button go_to_final {
                                 hexpand: true;
                                 clicked => $go_to_final();
+
+                                styles [
+                                    "raised",
+                                ]
 
                                 Image {
                                     icon-name: "media-skip-forward-symbolic";
@@ -278,11 +303,39 @@ template $MainWindow: Adw.ApplicationWindow {
         }
 
         [content]
-        Adw.ToolbarView data_panel {
+        Adw.ToolbarView {
             [top]
             Adw.HeaderBar {
-                title-widget: Adw.WindowTitle {
-                    title: "Data";
+                title-widget: Adw.ToggleGroup plot_mode {
+                    homogeneous: true;
+
+                    styles [
+                        "flat",
+                    ]
+
+                    Adw.Toggle {
+                        label: "Time";
+                        name: "time";
+                        icon-name: "clock-alt-symbolic";
+                    }
+
+                    Adw.Toggle {
+                        label: "Distance";
+                        name: "distance";
+                        icon-name: "distance-symbolic";
+                    }
+
+                    Adw.Toggle {
+                        label: "FT Time";
+                        name: "fourier_time";
+                        icon-name: "integral-symbolic";
+                    }
+
+                    Adw.Toggle {
+                        label: "FT Distance";
+                        name: "fourier_distance";
+                        icon-name: "integral3-symbolic";
+                    }
                 };
             }
 
@@ -354,9 +407,9 @@ FileDialog save_as {
         FileFilter {
             name: "TSV";
 
-            mime-types: [
+            mime-types [
                 "text/tab-separated-values",
-            ];
+            ]
         }
     };
 }
