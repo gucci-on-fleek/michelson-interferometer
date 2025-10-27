@@ -16,9 +16,6 @@ from threading import Thread
 from time import sleep
 
 import numpy as np
-from matplotlib.backends.backend_gtk4agg import (
-    FigureCanvasGTK4Agg as FigureCanvas,
-)
 
 from . import devices, utils
 

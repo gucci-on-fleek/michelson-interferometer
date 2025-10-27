@@ -25,7 +25,7 @@ LONG_SLEEP = 1 / 6  # seconds
 
 
 class KinesisMotor:
-    """Mock SCPIDevice for testing purposes."""
+    """Mock KinesisMotor for testing purposes."""
 
     def __init__(self, path: str, scale: tuple[float, float, float]) -> None:
         print(f"(KinesisMotor) __init__({path!r}, {scale!r})")
