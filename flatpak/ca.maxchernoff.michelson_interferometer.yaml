@@ -8,7 +8,7 @@ runtime: org.gnome.Platform
 runtime-version: "49"
 sdk: org.gnome.Sdk
 
-command: /usr/bin/python3.13
+command: michelson-interferometer
 
 modules:
   - name: libusb
@@ -63,13 +63,25 @@ modules:
       - mkdir -p /app/share/icons/hicolor/symbolic/
       - cp -r ./data/resources/icon-dev-kit /app/share/icons/hicolor/symbolic/apps
 
-  # - name: michelson-interferometer
-  #   buildsystem: simple
-  #   build-commands:
-  #     - pip3 install --prefix=/app --no-build-isolation --no-deps "."
-  #   sources:
-  #     - type: dir
-  #       path: ".."
+  - name: michelson-interferometer
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-build-isolation --no-deps "."
+    sources:
+      - type: dir
+        path: ".."
+
+  - name: app-data
+    buildsystem: simple
+    build-commands:
+      - install -D -m 644 ./ca.maxchernoff.michelson_interferometer.svg /app/share/icons/hicolor/scalable/apps/ca.maxchernoff.michelson_interferometer.svg
+      - install -D -m 644 ./ca.maxchernoff.michelson_interferometer-symbolic.svg /app/share/icons/hicolor/symbolic/apps/ca.maxchernoff.michelson_interferometer-symbolic.svg
+      - install -D -m 644 ./ca.maxchernoff.michelson_interferometer.desktop /app/share/applications/ca.maxchernoff.michelson_interferometer.desktop
+      - install -D -m 644 ./ca.maxchernoff.michelson_interferometer.metainfo.xml /app/share/metainfo/ca.maxchernoff.michelson_interferometer.metainfo.xml
+      - install -D -m 755 ./michelson-interferometer.sh /app/bin/michelson-interferometer
+    sources:
+      - type: dir
+        path: "../flatpak"
 
 finish-args:
   # X11

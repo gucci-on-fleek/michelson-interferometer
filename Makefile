@@ -189,3 +189,12 @@ build/flatpak.tar.zstd: flatpak/user-flatpak.sh
 	cp ./build/ubuntu-tree/usr/bin/flatpak ./build/flatpak-tree/libexec/
 
 	tar --zstd -cf ./build/flatpak.tar.zstd -C ./build/flatpak-tree/ .
+
+# Update the file versions
+version_run := git ls-files | xargs sed -Ei
+
+.PHONY: update-version
+update-version:
+	${version_run} "/%%[v]ersion/ s/[[:digit:]]\.[[:digit:]]\.[[:digit:]]/${version}/"
+	${version_run} "/%%[d]ashdate/ s/[[:digit:]]{4}.[[:digit:]]{2}.[[:digit:]]{2}/$$(date -I)/"
+	${version_run} "/%%[s]lashdate/ s|[[:digit:]]{4}.[[:digit:]]{2}.[[:digit:]]{2}|$$(date +%Y/%m/%d)|"

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+
+Name=Michelson Interferometer
+Comment=Michelson Interferometer device controller
+Categories=Science;Physics;
+
+Icon=ca.maxchernoff.michelson_interferometer
+Exec=michelson-interferometer
+Terminal=false

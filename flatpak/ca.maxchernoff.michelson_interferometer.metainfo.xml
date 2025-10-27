@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>ca.maxchernoff.michelson_interferometer</id>
+
+  <name>Michelson Interferometer</name>
+  <summary>Michelson Interferometer device controller</summary>
+  <url type="homepage">https://github.com/gucci-on-fleek/michelson-interferometer</url>
+
+  <metadata_license>CC-BY-SA-4.0</metadata_license>
+  <project_license>MPL-2.0</project_license>
+  <content_rating type="oars-1.1" />
+
+  <description>
+    <p>
+      This application allows you to control a Michelson Interferometer light
+      detector and motor via USB.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">ca.maxchernoff.michelson_interferometer.desktop</launchable>
+
+  <developer id="ca.maxchernoff">
+    <name>Max Chernoff</name>
+  </developer>
+
+  <releases>
+    <release version="0.0" date="2025-10-27">      <!--%%version %%dashdate -->
+    </release>
+  </releases>
+</component>
