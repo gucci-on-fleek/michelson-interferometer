@@ -14,6 +14,7 @@ SHELL := /usr/bin/bash
 # Variables
 VENV := python3 -m venv
 BLUEPRINT_COMPILER := blueprint-compiler
+GPG_OPTS := --gpg-sign=5C696408F561E6C2A12A2BA08FD44004DB2B757E
 
 # Default target
 .DEFAULT_GOAL := default
@@ -118,8 +119,10 @@ build/repo/refs/heads/app/ca.maxchernoff.michelson_interferometer/x86_64/master:
 		--install-deps-from=flathub \
 		--repo=./build/repo/ \
 		--state-dir=./build/state/ \
+		--keep-build-dirs \
 		--force-clean \
 		--install \
+		${GPG_OPTS} \
 		./build/flatpak/ \
 		./flatpak/ca.maxchernoff.michelson_interferometer.yaml
 

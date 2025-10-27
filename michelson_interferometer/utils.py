@@ -30,7 +30,7 @@ from gi.repository import Adw, Gdk, Gtk  # type: ignore
 ### Type Definitions ###
 ########################
 
-type RGBAColour = tuple[float, float, float, float]
+RGBAColour = tuple[float, float, float, float]
 
 
 #################
