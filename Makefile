@@ -54,31 +54,60 @@ build/.flathub-enabled:
 
 # Install the GNOME Flatpak SDK
 build/.gnome-sdk-installed: build/.flathub-enabled
-	flatpak --user install --assumeyes org.gnome.Sdk//48
+	flatpak --user install --assumeyes org.gnome.Sdk//49
 	touch $@
 
 # Download the Python dependencies for the Flatpak build
-build/wheels/.all-downloaded: build/.gnome-sdk-installed pyproject.toml
+flatpak/python-modules.yaml: build/.gnome-sdk-installed pyproject.toml
+	# Clear the previous downloads
+	rm -r ./build/wheels/ >/dev/null || true
+	mkdir -p ./build/wheels/
+	truncate --size=0 ./flatpak/python-modules.yaml
+
 	# Download all the dependencies
 	flatpak --user run \
 		--devel \
 		--share=network \
 		--filesystem=host \
 		--command=pip3 \
-		org.gnome.Sdk//48 \
+		org.gnome.Sdk//49 \
 		download \
 			--only-binary=":all:" \
 			--no-binary="pyft232" \
 			--no-build-isolation \
 			--dest=./build/wheels/ \
-			"."
+			--no-cache-dir \
+			--verbose --verbose \
+			"." \
+		| grep \
+			--only-matching \
+			--perl-regexp \
+			'(?<=https://files\.pythonhosted\.org:443 "GET )/packages/\S+' \
+		| grep --invert-match 'metadata' \
+		| sed 's|^|https://files.pythonhosted.org|' \
+		> ./build/python-dependencies-urls.txt
 
-	touch $@
+	# Create the Flatpak module file
+	echo "modules:" >> ./flatpak/python-modules.yaml
+	echo "  - name: python3" >> ./flatpak/python-modules.yaml
+	echo "    buildsystem: simple" >> ./flatpak/python-modules.yaml
+	echo "    build-commands:" >> ./flatpak/python-modules.yaml
+	echo "      - pip3 install --prefix=/app --no-deps *" >> ./flatpak/python-modules.yaml
+	echo "    sources:" >> ./flatpak/python-modules.yaml
+
+	for file in ./build/wheels/* ; do
+		name="$$(basename $$file)"
+		url="$$(grep --fixed-strings "$$name$$$$" ./build/python-dependencies-urls.txt)"
+
+		echo "      - type: file" >> ./flatpak/python-modules.yaml
+		echo "        url: $$url" >> ./flatpak/python-modules.yaml
+		echo "        sha256: $$(sha256sum $$file | cut -d' ' -f1)" >> ./flatpak/python-modules.yaml
+		echo "" >> ./flatpak/python-modules.yaml
+	done
 
 # Build the Flatpak repository
 build/repo/refs/heads/app/ca.maxchernoff.michelson_interferometer/x86_64/master: \
 	build/.flathub-enabled \
-	build/wheels/.all-downloaded \
 	flatpak/ca.maxchernoff.michelson_interferometer.yaml \
 	# (end of prerequisites)
 

@@ -5,10 +5,10 @@
 
 id: ca.maxchernoff.michelson_interferometer
 runtime: org.gnome.Platform
-runtime-version: "48"
+runtime-version: "49"
 sdk: org.gnome.Sdk
 
-command: /usr/bin/python3.12
+command: /usr/bin/python3.13
 
 modules:
   - name: libusb
@@ -51,13 +51,7 @@ modules:
         url: https://gitlab.gnome.org/GNOME/blueprint-compiler.git
         tag: v0.16.0
 
-  - name: python3
-    buildsystem: simple
-    build-commands:
-      - pip3 install --prefix=/app --no-build-isolation --no-deps . ./build/wheels/*
-    sources:
-      - type: dir
-        path: ".."
+  - flatpak/python-modules.yaml
 
 finish-args:
   # X11
