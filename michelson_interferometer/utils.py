@@ -12,11 +12,13 @@ from typing import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
+import polars as pl
 from matplotlib.backends.backend_gtk4cairo import (
     FigureCanvasGTK4Cairo as FigureCanvas,
 )
 from matplotlib.figure import Figure
 from matplotlib.rcsetup import cycler
+from scipy import fft
 
 # GTK imports
 import gi
@@ -74,12 +76,15 @@ def gdk_colour_to_tuple(gdk_colour: Gdk.RGBA) -> RGBAColour:
 class Plotter:
     """Class to handle matplotlib plotting in the GUI."""
 
-    def __init__(self, window: Adw.ApplicationWindow) -> None:
+    def __init__(
+        self,
+        plot_mode: Adw.ToggleGroup,  # type: ignore
+    ) -> None:
         """Configure the matplotlib settings."""
         # Set the matplotlib parameters
         self._set_font()
         self._set_background_colour()
-        self._set_foreground_colour(window)
+        self._set_foreground_colour(plot_mode)
         self._set_grid()
         self._set_plot_colours()
 
@@ -89,6 +94,7 @@ class Plotter:
         # Variables
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
+        self.plot_mode = plot_mode
 
     def _set_font(self) -> None:
         """Set the matplotlib font parameters."""
@@ -172,12 +178,47 @@ class Plotter:
 
         plt.rcParams["axes.prop_cycle"] = cycler(color=plot_colours)
 
-    def draw_data(
+    def by_position(
+        self,
+        detector_data: np.ndarray,
+        motor_data: np.ndarray,
+    ) -> pl.DataFrame:
+        """Converts the data from time to position-based data."""
+        # Convert to Polars DataFrames
+        detector = pl.DataFrame(
+            detector_data, schema=["time", "intensity"]
+        ).with_columns(pl.from_epoch("time", time_unit="s"))
+
+        motor = pl.DataFrame(
+            motor_data, schema=["time", "position"]
+        ).with_columns(
+            pl.from_epoch("time", time_unit="s"),
+        )
+
+        # Join the data
+        by_position = (
+            motor.join_asof(
+                detector,
+                on="time",
+                strategy="nearest",
+            )
+            .select(
+                pl.col("position").round(3),
+                pl.col("intensity"),
+            )
+            .group_by("position")
+            .agg(pl.col("intensity"))
+            .sort("position")
+        )
+
+        return by_position
+
+    def draw_time_plots(
         self,
         detector_data: np.ndarray,
         motor_data: np.ndarray,
     ) -> None:
-        """Draw the data on the figure."""
+        """Draw the data as a function of time on the figure."""
         # Create the axes
         intensity_axis = self.figure.add_subplot()
         position_axis = intensity_axis.twinx()
@@ -205,6 +246,95 @@ class Plotter:
         except IndexError:
             pass
 
+    def draw_distance_plots(
+        self,
+        detector_data: np.ndarray,
+        motor_data: np.ndarray,
+    ) -> None:
+        """Draw the data as a function of distance on the figure."""
+        by_position = (
+            self.by_position(detector_data, motor_data)
+            .explode("intensity")
+            .to_numpy()
+        )
+
+        # Create the axis
+        intensity_axis = self.figure.add_subplot()
+
+        # Set the display settings
+        intensity_axis.set_xlabel("Position (mm)")
+        intensity_axis.set_ylabel("Intensity (%)")
+
+        # Plot the data
+        intensity_axis.plot(
+            by_position[:, 0],
+            by_position[:, 1] * 100,
+            ".C0",
+            label="Intensity",
+        )
+
+    def draw_fft_time_plots(
+        self,
+        detector_data: np.ndarray,
+        motor_data: np.ndarray,
+    ) -> None:
+        """Draw the data as a function of time, using a Fourier transform."""
+        # Compute the FFTs
+        detector_fft = fft.rfft(detector_data[:, 1] * 100)
+
+        # Create the axis
+        intensity_axis = self.figure.add_subplot()
+
+        # Set the display settings
+        intensity_axis.set_xlabel("Frequency (Hz)")
+        intensity_axis.set_ylabel("Intensity (%)")
+
+        # Plot the data
+        intensity_axis.plot(
+            detector_fft.real[1:],  # type: ignore
+            ".C0",
+            label="Real",
+        )
+        intensity_axis.plot(
+            detector_fft.imag[1:],  # type: ignore
+            ".C1",
+            label="Imaginary",
+        )
+
+    def draw_fft_distance_plots(
+        self,
+        detector_data: np.ndarray,
+        motor_data: np.ndarray,
+    ) -> None:
+        """Draw the data as a function of distance, using a Fourier transform."""
+        by_position = (
+            self.by_position(detector_data, motor_data)
+            .with_columns(pl.col("intensity").list.median())
+            .to_numpy()
+        )
+
+        # Compute the FFTs
+        detector_fft = fft.rfft(by_position[:, 1] * 100)
+
+        # Create the axis
+        intensity_axis = self.figure.add_subplot()
+
+        # Set the display settings
+        intensity_axis.set_xlabel("Wavenumber (1/mm)")
+        intensity_axis.set_ylabel("Intensity (%)")
+
+        # Plot the data
+        intensity_axis.plot(
+            detector_fft.real[1:],  # type: ignore
+            ".C0",
+            label="Real",
+        )
+        intensity_axis.plot(
+            detector_fft.imag[1:],  # type: ignore
+            ".C1",
+            label="Imaginary",
+        )
+
     def draw_plot(
         self,
         detector_data: np.ndarray,
@@ -216,7 +346,18 @@ class Plotter:
         self.figure.clear(keep_observers=True)
 
         # Draw the data
-        self.draw_data(detector_data, motor_data)
+        plot_mode: str = self.plot_mode.get_active_name()
+        match plot_mode:
+            case "time":
+                self.draw_time_plots(detector_data, motor_data)
+            case "distance":
+                self.draw_distance_plots(detector_data, motor_data)
+            case "fourier_time":
+                self.draw_fft_time_plots(detector_data, motor_data)
+            case "fourier_distance":
+                self.draw_fft_distance_plots(detector_data, motor_data)
+            case _:
+                raise ValueError(f"Unknown plot mode: {plot_mode}")
 
         # Add the legends
         legend = self.figure.legend(loc="outside upper right")

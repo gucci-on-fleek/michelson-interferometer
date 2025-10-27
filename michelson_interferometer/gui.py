@@ -142,7 +142,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _initialize_plotter(self) -> None:
         """Initialize the plotter."""
         # Create the plotter
-        self.plotter = utils.Plotter(window=self)
+        self.plotter = utils.Plotter(plot_mode=self.plot_mode)
         self.plot_bin.set_child(self.plotter.canvas)
         utils.start_thread(self._plot_thread)
 
@@ -319,7 +319,9 @@ class MainWindow(Adw.ApplicationWindow):
             for (motor_time, motor_position), (
                 detector_time,
                 detector_intensity,
-            ) in zip_longest(self.motor.data, self.detector.data):
+            ) in zip_longest(
+                self.motor.data, self.detector.data, fillvalue=(np.nan, np.nan)
+            ):
                 writer.writerow(
                     (
                         motor_time,
