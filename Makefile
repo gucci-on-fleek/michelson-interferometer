@@ -88,16 +88,17 @@ flatpak/python-modules.yaml: build/.gnome-sdk-installed pyproject.toml
 		> ./build/python-dependencies-urls.txt
 
 	# Create the Flatpak module file
+	echo "name: python-dependencies" >> ./flatpak/python-modules.yaml
 	echo "modules:" >> ./flatpak/python-modules.yaml
-	echo "  - name: python3" >> ./flatpak/python-modules.yaml
+	echo "  - name: python-dependencies" >> ./flatpak/python-modules.yaml
 	echo "    buildsystem: simple" >> ./flatpak/python-modules.yaml
 	echo "    build-commands:" >> ./flatpak/python-modules.yaml
-	echo "      - pip3 install --prefix=/app --no-deps *" >> ./flatpak/python-modules.yaml
+	echo "      - pip3 install --prefix=/app --exists-action=ignore --no-deps *" >> ./flatpak/python-modules.yaml
 	echo "    sources:" >> ./flatpak/python-modules.yaml
 
 	for file in ./build/wheels/* ; do
 		name="$$(basename $$file)"
-		url="$$(grep --fixed-strings "$$name$$$$" ./build/python-dependencies-urls.txt)"
+		url="$$(grep --fixed-strings "$$name" ./build/python-dependencies-urls.txt)"
 
 		echo "      - type: file" >> ./flatpak/python-modules.yaml
 		echo "        url: $$url" >> ./flatpak/python-modules.yaml
@@ -109,6 +110,7 @@ flatpak/python-modules.yaml: build/.gnome-sdk-installed pyproject.toml
 build/repo/refs/heads/app/ca.maxchernoff.michelson_interferometer/x86_64/master: \
 	build/.flathub-enabled \
 	flatpak/ca.maxchernoff.michelson_interferometer.yaml \
+	flatpak/python-modules.yaml \
 	# (end of prerequisites)
 
 	# Build the Flatpak

@@ -51,7 +51,18 @@ modules:
         url: https://gitlab.gnome.org/GNOME/blueprint-compiler.git
         tag: v0.16.0
 
-  - flatpak/python-modules.yaml
+  - "./python-modules.yaml"
+
+  - name: icons
+    buildsystem: simple
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/World/design/icon-library.git
+        tag: "0.0.22"
+    build-commands:
+      - mkdir -p /app/share/icons/Adwaita/symbolic/
+      - cp -r ./data/resources/icon-dev-kit /app/share/icons/Adwaita/symbolic/misc
+      - gtk4-update-icon-cache --ignore-theme-index /app/share/icons/Adwaita/
 
 finish-args:
   # X11
