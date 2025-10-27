@@ -3,18 +3,37 @@
 # SPDX-License-Identifier: MPL-2.0+
 # SPDX-FileCopyrightText: 2025 Max Chernoff
 
-# Target-style settings
+################
+### Settings ###
+################
+
+# Remove the builtin rules
 .SUFFIXES:
 MAKEFLAGS += --no-builtin-rules
+
+# Silence the commands
 .SILENT:
+
+# Shell settings
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
 SHELL := /usr/bin/bash
 
-# Variables
+# By default, use the "venv" module, but allow overriding for the PJL computers
+# that require you to use the "virtualenv" command.
 VENV := python3 -m venv
+
+# Use the host's blueprint-compiler by default, but allow overriding so that
+# you can use a copy inside of the Flatpak.
 BLUEPRINT_COMPILER := blueprint-compiler
+
+# You'll want to modify this unless you're me :)
 GPG_OPTS := --gpg-sign=5C696408F561E6C2A12A2BA08FD44004DB2B757E
+
+
+####################
+### Host Targets ###
+####################
 
 # Default target
 .DEFAULT_GOAL := default
@@ -41,22 +60,34 @@ default:
 	# Touch the activate file so that make knows the target is up to date
 	touch ./.venv/bin/activate
 
-# Run the GUI
+# Run the GUI on the host
 .PHONY: run-host
 run-host: .venv/bin/activate michelson_interferometer/main.ui michelson_interferometer/*.py
 	source ./.venv/bin/activate
 	python3 -m michelson_interferometer.gui
 
+.PHONY: update-version
+update-version:
+	git ls-files | xargs sed -Ei \
+		-e "/%%[v]ersion/ s/[[:digit:]]\.[[:digit:]]\.[[:digit:]]/${version}/" \
+		-e "/%%[d]ashdate/ s/[[:digit:]]{4}.[[:digit:]]{2}.[[:digit:]]{2}/$$(date -I)/" \
+		-e "/%%[s]lashdate/ s|[[:digit:]]{4}.[[:digit:]]{2}.[[:digit:]]{2}|$$(date +%Y/%m/%d)|" \
+
+#######################
+### Flatpak Targets ###
+#######################
+
 # Make sure that Flathub is enabled
 build/.flathub-enabled:
 	flatpak --user remote-add --if-not-exists flathub \
 		https://dl.flathub.org/repo/flathub.flatpakrepo
-	touch $@
+
+	mkdir ./build/ && touch $@
 
 # Install the GNOME Flatpak SDK
 build/.gnome-sdk-installed: build/.flathub-enabled
 	flatpak --user install --assumeyes org.gnome.Sdk//49
-	touch $@
+	mkdir ./build/ && touch $@
 
 # Download the Python dependencies for the Flatpak build
 flatpak/python-modules.yaml: build/.gnome-sdk-installed pyproject.toml
@@ -112,6 +143,8 @@ build/repo/refs/heads/app/ca.maxchernoff.michelson_interferometer/x86_64/master:
 	build/.flathub-enabled \
 	flatpak/ca.maxchernoff.michelson_interferometer.yaml \
 	flatpak/python-modules.yaml \
+	michelson_interferometer/*.py \
+	michelson_interferometer/main.ui \
 	# (end of prerequisites)
 
 	# Build the Flatpak
@@ -149,52 +182,3 @@ run-flatpak:
 
 	flatpak run ca.maxchernoff.michelson_interferometer \
 		-m michelson_interferometer.gui
-
-# Download the necessary Ubuntu packages
-build/ubuntu-packages/.all-downloaded:
-	mkdir -p build/ubuntu-packages/
-	wget --directory-prefix build/ubuntu-packages/ \
-		"http://security.ubuntu.com/ubuntu/pool/universe/f/flatpak/flatpak_1.12.7-1ubuntu0.1_amd64.deb" \
-		"http://ubuntu.cs.utah.edu/ubuntu/pool/main/x/xdg-dbus-proxy/xdg-dbus-proxy_0.1.6-1_amd64.deb" \
-		"http://ubuntu.cs.utah.edu/ubuntu/pool/universe/a/appstream-glib/libappstream-glib8_0.7.18-2_amd64.deb" \
-		"http://ubuntu.cs.utah.edu/ubuntu/pool/universe/m/malcontent/libmalcontent-0-0_0.10.4-1_amd64.deb" \
-		"http://ubuntu.cs.utah.edu/ubuntu/pool/universe/o/ostree/libostree-1-1_2022.2-3_amd64.deb"
-
-	touch $@
-
-# Unpack the Ubuntu packages
-build/ubuntu-tree/.all-unpacked: build/ubuntu-packages/.all-downloaded
-	mkdir -p ./build/ubuntu-tree/
-	cd ./build/ubuntu-tree/
-
-	for package in ../ubuntu-packages/*.deb; do
-		ar x $$package
-		tar xf ./data.tar.*
-		rm ./*.tar.* ./debian-binary
-	done
-
-	touch ./.all-unpacked
-
-# Creates the non-root Flatpak command installation bundle
-.PHONY: build-flatpak-cmd-bundle
-build-flatpak-cmd-bundle: build/flatpak.tar.zstd ;
-
-build/flatpak.tar.zstd: flatpak/user-flatpak.sh
-	rm -r ./build/flatpak-tree/ >/dev/null || true
-	mkdir -p ./build/flatpak-tree/{lib,bin,libexec}/
-
-	cp ./build/ubuntu-tree/usr/lib/x86_64-linux-gnu/* ./build/flatpak-tree/lib/
-	cp ./build/ubuntu-tree/usr/bin/xdg-dbus-proxy ./build/flatpak-tree/bin/
-	cp ./flatpak/user-flatpak.sh ./build/flatpak-tree/bin/flatpak
-	cp ./build/ubuntu-tree/usr/bin/flatpak ./build/flatpak-tree/libexec/
-
-	tar --zstd -cf ./build/flatpak.tar.zstd -C ./build/flatpak-tree/ .
-
-# Update the file versions
-version_run := git ls-files | xargs sed -Ei
-
-.PHONY: update-version
-update-version:
-	${version_run} "/%%[v]ersion/ s/[[:digit:]]\.[[:digit:]]\.[[:digit:]]/${version}/"
-	${version_run} "/%%[d]ashdate/ s/[[:digit:]]{4}.[[:digit:]]{2}.[[:digit:]]{2}/$$(date -I)/"
-	${version_run} "/%%[s]lashdate/ s|[[:digit:]]{4}.[[:digit:]]{2}.[[:digit:]]{2}|$$(date +%Y/%m/%d)|"
