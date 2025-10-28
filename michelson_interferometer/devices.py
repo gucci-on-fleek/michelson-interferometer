@@ -99,8 +99,13 @@ class Motor:
 
     def wait(self) -> None:
         """Waits for the motor to finish any current movement."""
-        sleep(4 * SLEEP_DURATION)
-        self._device.wait_for_stop()
+        sleep(2 * SLEEP_DURATION)
+        try:
+            self._device.wait_for_stop()
+        except ThorlabsError:
+            # Try once more
+            sleep(2 * SLEEP_DURATION)
+            self._device.wait_for_stop()
 
     def home(self) -> None:
         """Homes the motor."""
