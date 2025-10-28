@@ -82,12 +82,12 @@ build/.flathub-enabled:
 	flatpak --user remote-add --if-not-exists flathub \
 		https://dl.flathub.org/repo/flathub.flatpakrepo
 
-	mkdir ./build/ && touch $@
+	mkdir -p ./build/ && touch $@
 
 # Install the GNOME Flatpak SDK
 build/.gnome-sdk-installed: build/.flathub-enabled
-	flatpak --user install --assumeyes org.gnome.Sdk//49
-	mkdir ./build/ && touch $@
+	flatpak --user install --assumeyes org.gnome.Sdk//48
+	mkdir -p ./build/ && touch $@
 
 # Download the Python dependencies for the Flatpak build
 flatpak/python-modules.yaml: build/.gnome-sdk-installed pyproject.toml
@@ -102,7 +102,7 @@ flatpak/python-modules.yaml: build/.gnome-sdk-installed pyproject.toml
 		--share=network \
 		--filesystem=host \
 		--command=pip3 \
-		org.gnome.Sdk//49 \
+		org.gnome.Sdk//48 \
 		download \
 			--only-binary=":all:" \
 			--no-binary="pyft232" \
@@ -125,7 +125,7 @@ flatpak/python-modules.yaml: build/.gnome-sdk-installed pyproject.toml
 	echo "  - name: python-dependencies" >> ./flatpak/python-modules.yaml
 	echo "    buildsystem: simple" >> ./flatpak/python-modules.yaml
 	echo "    build-commands:" >> ./flatpak/python-modules.yaml
-	echo "      - pip3 install --prefix=/app --exists-action=ignore --no-deps *" >> ./flatpak/python-modules.yaml
+	echo "      - pip3 install --prefix=/app --exists-action=i --no-deps *" >> ./flatpak/python-modules.yaml
 	echo "    sources:" >> ./flatpak/python-modules.yaml
 
 	for file in ./build/wheels/* ; do

@@ -18,7 +18,7 @@ from traceback import print_exc
 from typing import TYPE_CHECKING, Any, Callable
 from warnings import catch_warnings
 
-with catch_warnings(category=UserWarning, action="ignore", lineno=10):
+with catch_warnings(category=UserWarning, action="ignore", lineno=15):
     from pylablib.core.devio.SCPI import SCPIDevice
     from pylablib.devices.Thorlabs import KinesisMotor
 
@@ -85,7 +85,7 @@ class Motor:
         # Initialize the variables
         self.on_update = on_update
         self.data: list[tuple[float, float]] = []
-        self._current_speed = MOTOR_MAX_SPEED
+        self._current_speed = 0.0
 
         # Initialize the thread
         self._thread = start_thread(self._run_thread)
@@ -105,6 +105,7 @@ class Motor:
     def home(self) -> None:
         """Homes the motor."""
         self._queue.put((self._enable, None))
+        self._queue.put((self._set_speed, MOTOR_MAX_SPEED))
         self._queue.put((self._home, None))
 
     def _enable(self, _: None) -> None:
