@@ -36,6 +36,7 @@ DETECTOR_DEVICE_GLOB = "/dev/ttyACM?"
 MOTOR_SCALE = (2_000.0, 13_421.77, 1.374)
 MOTOR_MAX_POS = 50.0  # millimeters
 MOTOR_MAX_SPEED = 100.0  # millimeters/second
+SPEED_EPSILON = 0.1  # millimeters/second
 
 DETECTOR_BAUD = 115_200
 DETECTOR_TIMEOUT = 0.05  # seconds
@@ -155,15 +156,21 @@ class Motor:
 
     def _set_speed(self, speed: float) -> None:
         """Sets the speed of the motor in millimeters/second."""
-        sleep(SLEEP_DURATION)
-        self._device.setup_velocity(max_velocity=speed, scale=True)
         self._current_speed = speed
+        for _ in range(3):
+            try:
+                self._device.setup_velocity(max_velocity=speed, scale=True)
 
-        sleep(SLEEP_DURATION)
-        try:
-            print(self._device.get_velocity_parameters(scale=True))
-        except ThorlabsError:
-            pass
+                current_speed = self._device.get_velocity_parameters(
+                    scale=True
+                ).max_velocity
+
+                if abs(current_speed - speed) > SPEED_EPSILON:
+                    raise ValueError("Speed not set correctly")
+            except (ThorlabsError, ValueError):
+                sleep(SLEEP_DURATION)
+            else:
+                break
 
     def _run_thread(self) -> None:
         """Runs the thread."""
