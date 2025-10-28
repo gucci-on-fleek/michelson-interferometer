@@ -37,6 +37,7 @@ MOTOR_SCALE = (2_000.0, 13_421.77, 1.374)
 MOTOR_MAX_POS = 50.0  # millimeters
 MOTOR_MAX_SPEED = 100.0  # millimeters/second
 SPEED_EPSILON = 0.1  # millimeters/second
+INVALID_SPEED = -1.0  # millimeters/second
 
 DETECTOR_BAUD = 115_200
 DETECTOR_TIMEOUT = 0.05  # seconds
@@ -86,7 +87,7 @@ class Motor:
         # Initialize the variables
         self.on_update = on_update
         self.data: list[tuple[float, float]] = []
-        self._current_speed = 0.0
+        self._current_speed = INVALID_SPEED
 
         # Initialize the thread
         self._thread = start_thread(self._run_thread)
@@ -110,8 +111,8 @@ class Motor:
 
     def home(self) -> None:
         """Homes the motor."""
+        self._current_speed = INVALID_SPEED  # Invalidate current speed
         self._queue.put((self._enable, None))
-        self._queue.put((self._set_speed, MOTOR_MAX_SPEED))
         self._queue.put((self._home, None))
 
     def _enable(self, _: None) -> None:
