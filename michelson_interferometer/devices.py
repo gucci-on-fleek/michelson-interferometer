@@ -155,6 +155,7 @@ class Motor:
 
     def _set_speed(self, speed: float) -> None:
         """Sets the speed of the motor in millimeters/second."""
+        sleep(SLEEP_DURATION)
         self._device.setup_velocity(max_velocity=speed, scale=True)
         self._current_speed = speed
 
