@@ -20,7 +20,7 @@ from warnings import catch_warnings
 
 with catch_warnings(category=UserWarning, action="ignore", lineno=15):
     from pylablib.core.devio.SCPI import SCPIDevice
-    from pylablib.devices.Thorlabs import KinesisMotor
+    from pylablib.devices.Thorlabs import KinesisMotor, ThorlabsError
 
 from .utils import start_thread
 
@@ -152,8 +152,10 @@ class Motor:
         """Sets the speed of the motor in millimeters/second."""
         self._device.setup_velocity(max_velocity=speed, scale=True)
         self._current_speed = speed
-        sleep(SLEEP_DURATION)
-        print(self._device.get_velocity_parameters(scale=True))
+        try:
+            self._device.get_velocity_parameters(scale=True)
+        except ThorlabsError:
+            pass
 
     def _run_thread(self) -> None:
         """Runs the thread."""
