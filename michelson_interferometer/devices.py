@@ -99,7 +99,7 @@ class Motor:
 
     def wait(self) -> None:
         """Waits for the motor to finish any current movement."""
-        sleep(2 * SLEEP_DURATION)
+        sleep(4 * SLEEP_DURATION)
         self._device.wait_for_stop()
 
     def home(self) -> None:
@@ -152,8 +152,10 @@ class Motor:
         """Sets the speed of the motor in millimeters/second."""
         self._device.setup_velocity(max_velocity=speed, scale=True)
         self._current_speed = speed
+
+        sleep(SLEEP_DURATION)
         try:
-            self._device.get_velocity_parameters(scale=True)
+            print(self._device.get_velocity_parameters(scale=True))
         except ThorlabsError:
             pass
 
