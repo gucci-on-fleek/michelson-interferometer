@@ -36,7 +36,6 @@ DETECTOR_DEVICE_GLOB = "/dev/ttyACM?"
 MOTOR_SCALE = (2_000.0, 13_421.77, 1.374)
 MOTOR_MAX_POS = 50.0  # millimeters
 MOTOR_MAX_SPEED = 100.0  # millimeters/second
-SPEED_EPSILON = 0.1  # millimeters/second
 INVALID_SPEED = -1.0  # millimeters/second
 
 DETECTOR_BAUD = 115_200
@@ -166,7 +165,7 @@ class Motor:
                     scale=True
                 ).max_velocity
 
-                if abs(current_speed - speed) > SPEED_EPSILON:
+                if current_speed != speed:
                     raise ValueError("Speed not set correctly")
             except (ThorlabsError, ValueError):
                 sleep(SLEEP_DURATION)
@@ -190,6 +189,13 @@ class Motor:
 
             try:
                 func(arg)  # type: ignore[arg-type]
+            except ThorlabsError:
+                # Ok, let's retry once
+                sleep(SLEEP_DURATION)
+                try:
+                    func(arg)  # type: ignore[arg-type]
+                except:
+                    print_exc()
             except:
                 print_exc()
 
