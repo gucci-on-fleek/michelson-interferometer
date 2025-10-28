@@ -41,7 +41,7 @@ DETECTOR_BAUD = 115_200
 DETECTOR_TIMEOUT = 0.05  # seconds
 DETECTOR_NL = "\n"
 
-SLEEP_DURATION = 1 / 60  # seconds
+SLEEP_DURATION = 1 / 120  # seconds
 
 MAX_INTENSITY = 2**16 - 1  # 16-bit detector
 
@@ -152,6 +152,8 @@ class Motor:
         """Sets the speed of the motor in millimeters/second."""
         self._device.setup_velocity(max_velocity=speed, scale=True)
         self._current_speed = speed
+        sleep(SLEEP_DURATION)
+        print(self._device.get_velocity_parameters(scale=True))
 
     def _run_thread(self) -> None:
         """Runs the thread."""
