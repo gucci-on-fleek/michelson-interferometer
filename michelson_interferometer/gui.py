@@ -8,9 +8,6 @@
 ###############
 
 import sys
-from csv import excel_tab
-from csv import writer as csv_writer
-from itertools import zip_longest
 from pathlib import Path
 from threading import Thread
 from time import sleep
@@ -302,9 +299,12 @@ class MainWindow(Adw.ApplicationWindow):
         if file is None:
             return
 
-        path = file.get_path()
-        if path is None:
+        # Get the path
+        name = file.get_path()
+        if name is None:
             return
+
+        path = Path(name).with_suffix(".tsv")
 
         # Save the data
         utils.save_data(path, self.motor.data, self.detector.data)

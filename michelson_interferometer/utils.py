@@ -98,7 +98,7 @@ def fourier_transform(data: FloatColumns) -> tuple[FloatColumns, FloatColumns]:
 
 
 def save_data(
-    filename: str,
+    path: Path,
     motor_data: DeviceTimeValues,
     detector_data: DeviceTimeValues,
 ) -> None:
@@ -118,9 +118,6 @@ def save_data(
         orient="row",
     )
     data = pl.concat([motor, detector], how="horizontal")
-
-    # Get the path
-    path = Path(filename).with_suffix(".tsv")
 
     # Save the data
     data.write_csv(

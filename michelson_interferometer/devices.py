@@ -53,7 +53,7 @@ MAX_INTENSITY = 2**16 - 1  # 16-bit detector
 
 # Fake devices for testing
 if (not TYPE_CHECKING) and ("MI_FAKE_DEVICES" in environ):
-    from .devices_mock import SCPIDevice, KinesisMotor
+    from .devices_mock import KinesisMotor, SCPIDevice
 
     MOTOR_DEVICE_GLOB = "/dev/null"
     DETECTOR_DEVICE_GLOB = "/dev/null"
