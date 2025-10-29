@@ -17,7 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pygobject-stubs ~= 2.13.0 "]
-gtk = ["pycairo == 1.28.0", "PyGObject == 3.54.3"]
+gtk = ["pycairo == 1.28.0", "PyGObject == 3.52.3"]
 
 [build-system]
 requires = ["setuptools == 80.9.0"]
@@ -26,7 +26,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 80
-target-version = ["py313"]
+target-version = ["py312"]
 preview = true
 
 

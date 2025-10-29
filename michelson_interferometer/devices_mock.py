@@ -10,6 +10,7 @@
 from typing import Any
 from random import randint
 from time import sleep
+from collections import namedtuple
 
 #################
 ### Constants ###
@@ -22,6 +23,8 @@ LONG_SLEEP = 1 / 6  # seconds
 #########################
 ### Class Definitions ###
 #########################
+
+VelocityParameters = namedtuple("VelocityParameters", ["max_velocity"])
 
 
 class KinesisMotor:
@@ -62,6 +65,13 @@ class KinesisMotor:
         print(f"(KinesisMotor) setup_velocity({max_velocity!r}, {scale!r})")
         sleep(SHORT_SLEEP)
         self._speed = max_velocity
+
+    def get_velocity_parameters(self, scale: bool) -> VelocityParameters:
+        print(
+            f"(KinesisMotor) get_velocity_parameters({scale!r}) -> {self._speed!r}"
+        )
+        sleep(SHORT_SLEEP)
+        return VelocityParameters(max_velocity=self._speed)
 
 
 class SCPIDevice:

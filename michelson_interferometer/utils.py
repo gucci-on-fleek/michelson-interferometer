@@ -7,40 +7,23 @@
 ### Imports ###
 ###############
 
+from pathlib import Path
 from threading import Thread
 from typing import Callable
 
-import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
-from matplotlib.backends.backend_gtk4cairo import (
-    FigureCanvasGTK4Cairo as FigureCanvas,
-)
-from matplotlib.figure import Figure
-from matplotlib.rcsetup import cycler
-from scipy import fft
-
-# GTK imports
-import gi
-
-gi.require_version("Gtk", "4.0")
-gi.require_version("Adw", "1")
-
-from gi.repository import Adw, Gdk, Gtk  # type: ignore
 
 ########################
 ### Type Definitions ###
 ########################
 
-RGBAColour = tuple[float, float, float, float]
+# 2-column numpy array, used for processing the data.
+FloatColumns = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 
-
-#################
-### Constants ###
-#################
-
-TRANSPARENT_COLOUR: RGBAColour = (0.0, 0.0, 0.0, 0.0)
-PLOT_COLOUR_NAMES = ("BLUE", "ORANGE")
+# List of (time, value) tuples. We're using this instead of a numpy array
+# because Python lists are thread-safe.
+DeviceTimeValues = list[tuple[float, float]]
 
 
 ############################
@@ -57,314 +40,94 @@ def start_thread(func: Callable, *args) -> Thread:
     return thread
 
 
-def gdk_colour_to_tuple(gdk_colour: Gdk.RGBA) -> RGBAColour:
-    """Gets the RGBA tuple for a GDK colour."""
+def by_time_to_by_position(
+    detector_data: FloatColumns,
+    motor_data: FloatColumns,
+) -> pl.DataFrame:
+    """Converts the data from time-based to position-based."""
+    # Convert to Polars DataFrames
+    detector = pl.DataFrame(
+        detector_data, schema=["time", "intensity"]
+    ).with_columns(pl.from_epoch("time", time_unit="s"))
 
-    return (
-        gdk_colour.red,
-        gdk_colour.green,
-        gdk_colour.blue,
-        gdk_colour.alpha,
+    motor = pl.DataFrame(motor_data, schema=["time", "position"]).with_columns(
+        pl.from_epoch("time", time_unit="s"),
     )
 
-
-#########################
-### Class Definitions ###
-#########################
-
-
-class Plotter:
-    """Class to handle matplotlib plotting in the GUI."""
-
-    def __init__(
-        self,
-        plot_mode: Adw.ToggleGroup,  # type: ignore
-    ) -> None:
-        """Configure the matplotlib settings."""
-        # Set the matplotlib parameters
-        self._set_font()
-        self._set_background_colour()
-        self._set_foreground_colour(plot_mode)
-        self._set_grid()
-        self._set_plot_colours()
-
-        # Use a sensible layout rather than the horrible default
-        plt.rcParams["figure.constrained_layout.use"] = True
-
-        # Variables
-        self.figure = Figure()
-        self.canvas = FigureCanvas(self.figure)
-        self.plot_mode = plot_mode
-
-    def _set_font(self) -> None:
-        """Set the matplotlib font parameters."""
-        # Get the font name and size
-        adw_style = Adw.StyleManager.get_default()
-
-        name_and_size: str = adw_style.get_document_font_name()  # type: ignore
-        name, size = name_and_size.rsplit(" ", 1)
-
-        # Set the font parameters
-        plt.rcParams["font.family"] = name
-        plt.rcParams["font.size"] = int(size)
-
-    def _set_background_colour(self) -> None:
-        """Set the background colour of the matplotlib plots."""
-        # Set the background of the matplotlib canvas to be transparent
-        css = Gtk.CssProvider()
-        css.load_from_string(
-            ".matplotlib-canvas { background-color: transparent; }"
+    # Join the data
+    by_position = (
+        motor.join_asof(
+            detector,
+            on="time",
+            strategy="nearest",
         )
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(),  # type: ignore
-            css,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+        .select(
+            pl.col("position").round(3),
+            pl.col("intensity"),
         )
+        .group_by("position")
+        .agg(pl.col("intensity"))
+        .sort("position")
+    )
 
-        # Set the figure and axes backgrounds to be transparent
-        plt.rcParams["figure.facecolor"] = TRANSPARENT_COLOUR
-        plt.rcParams["axes.facecolor"] = TRANSPARENT_COLOUR
+    return by_position
 
-    def _set_foreground_colour(self, window: Adw.ApplicationWindow) -> None:
-        """Set the foreground colour of the matplotlib plots."""
-        # Get the text colour
-        text_colour = gdk_colour_to_tuple(window.get_color())
 
-        # Set the colours
-        plt.rcParams["axes.edgecolor"] = text_colour
-        plt.rcParams["text.color"] = text_colour
-        plt.rcParams["axes.labelcolor"] = text_colour
-        plt.rcParams["xtick.color"] = text_colour
-        plt.rcParams["ytick.color"] = text_colour
+def dataframe_merge_nested(data: pl.DataFrame) -> FloatColumns:
+    """Merges the contents of arrays nested in columns into a single column."""
+    return data.explode(
+        pl.last(),  # type: ignore[arg-type]
+    ).to_numpy()
 
-    def _set_grid(self) -> None:
-        """Set the grid parameters."""
-        # Frame
-        plt.rcParams["axes.spines.bottom"] = True
-        plt.rcParams["axes.spines.left"] = True
-        plt.rcParams["axes.spines.right"] = True
-        plt.rcParams["axes.spines.top"] = False
 
-        # Enable the grid
-        plt.rcParams["axes.grid"] = True
-        plt.rcParams["axes.grid.which"] = "major"
-        plt.rcParams["grid.alpha"] = 0.4
+def dataframe_median_nested(data: pl.DataFrame) -> FloatColumns:
+    """Computes the median of arrays nested in columns."""
+    return data.with_columns(pl.last().list.median()).to_numpy()
 
-        # Ticks
-        plt.rcParams["xtick.bottom"] = True
-        plt.rcParams["ytick.left"] = True
-        plt.rcParams["ytick.right"] = True
-        plt.rcParams["xtick.top"] = False
 
-        plt.rcParams["xtick.direction"] = "in"
-        plt.rcParams["ytick.direction"] = "in"
-        plt.rcParams["xtick.minor.visible"] = True
-        plt.rcParams["ytick.minor.visible"] = True
+def fourier_transform(data: FloatColumns) -> tuple[FloatColumns, FloatColumns]:
+    """Computes the Fourier transform of the data, returning the real and
+    imaginary parts."""
+    complex = np.fft.rfft(data)
 
-    def _set_plot_colours(self) -> None:
-        """Set the plot colours based on the current theme."""
-        # See if dark mode is enabled or not
-        adw_style = Adw.StyleManager.get_default()
-        dark_mode = adw_style.get_dark()
+    # The first element is the constant offset, which we don't care about, so
+    # we'll zero it out.
+    complex[0] = 0
 
-        # Get the plot colours
-        plot_colours: list[RGBAColour] = []
-        for colour_name in PLOT_COLOUR_NAMES:
-            colour_enum = getattr(Adw.AccentColor, colour_name)  # type: ignore
-            gdk_colour: Gdk.RGBA = Adw.AccentColor.to_standalone_rgba(  # type: ignore
-                colour_enum, dark_mode
-            )
-            plot_colours.append(gdk_colour_to_tuple(gdk_colour))
+    return complex.real, complex.imag
 
-        plt.rcParams["axes.prop_cycle"] = cycler(color=plot_colours)
 
-    def by_position(
-        self,
-        detector_data: np.ndarray,
-        motor_data: np.ndarray,
-    ) -> pl.DataFrame:
-        """Converts the data from time to position-based data."""
-        # Convert to Polars DataFrames
-        detector = pl.DataFrame(
-            detector_data, schema=["time", "intensity"]
-        ).with_columns(pl.from_epoch("time", time_unit="s"))
+def save_data(
+    filename: str,
+    motor_data: DeviceTimeValues,
+    detector_data: DeviceTimeValues,
+) -> None:
+    """Saves the motor and detector data to a CSV file."""
+    # Create the DataFrame
+    motor = pl.DataFrame(
+        motor_data,
+        schema=(("motor_time", pl.Float64), ("motor_position", pl.Float64)),
+        orient="row",
+    )
+    detector = pl.DataFrame(
+        detector_data,
+        schema=(
+            ("detector_time", pl.Float64),
+            ("detector_intensity", pl.Float64),
+        ),
+        orient="row",
+    )
+    data = pl.concat([motor, detector], how="horizontal")
 
-        motor = pl.DataFrame(
-            motor_data, schema=["time", "position"]
-        ).with_columns(
-            pl.from_epoch("time", time_unit="s"),
-        )
+    # Get the path
+    path = Path(filename).with_suffix(".tsv")
 
-        # Join the data
-        by_position = (
-            motor.join_asof(
-                detector,
-                on="time",
-                strategy="nearest",
-            )
-            .select(
-                pl.col("position").round(3),
-                pl.col("intensity"),
-            )
-            .group_by("position")
-            .agg(pl.col("intensity"))
-            .sort("position")
-        )
-
-        return by_position
-
-    def draw_time_plots(
-        self,
-        detector_data: np.ndarray,
-        motor_data: np.ndarray,
-    ) -> None:
-        """Draw the data as a function of time on the figure."""
-        # Create the axes
-        intensity_axis = self.figure.add_subplot()
-        position_axis = intensity_axis.twinx()
-
-        # Set the display settings
-        intensity_axis.set_xlabel("Time (s)")
-        intensity_axis.set_ylabel("Intensity (%)")
-        position_axis.set_ylabel("Position (mm)")
-        position_axis.grid(visible=False)
-
-        # Plot the data
-        try:
-            intensity_axis.plot(
-                detector_data[:, 0] - detector_data[0, 0],
-                detector_data[:, 1] * 100,
-                ".C0",
-                label="Detector",
-            )
-            position_axis.plot(
-                motor_data[:, 0] - motor_data[0, 0],
-                motor_data[:, 1],
-                ".C1",
-                label="Mirror",
-            )
-        except IndexError:
-            pass
-
-    def draw_distance_plots(
-        self,
-        detector_data: np.ndarray,
-        motor_data: np.ndarray,
-    ) -> None:
-        """Draw the data as a function of distance on the figure."""
-        by_position = (
-            self.by_position(detector_data, motor_data)
-            .explode("intensity")
-            .to_numpy()
-        )
-
-        # Create the axis
-        intensity_axis = self.figure.add_subplot()
-
-        # Set the display settings
-        intensity_axis.set_xlabel("Position (mm)")
-        intensity_axis.set_ylabel("Intensity (%)")
-
-        # Plot the data
-        intensity_axis.plot(
-            by_position[:, 0],
-            by_position[:, 1] * 100,
-            ".C0",
-            label="Intensity",
-        )
-
-    def draw_fft_time_plots(
-        self,
-        detector_data: np.ndarray,
-        motor_data: np.ndarray,
-    ) -> None:
-        """Draw the data as a function of time, using a Fourier transform."""
-        # Compute the FFTs
-        detector_fft = fft.rfft(detector_data[:, 1] * 100)
-
-        # Create the axis
-        intensity_axis = self.figure.add_subplot()
-
-        # Set the display settings
-        intensity_axis.set_xlabel("Frequency (Hz)")
-        intensity_axis.set_ylabel("Intensity (%)")
-
-        # Plot the data
-        intensity_axis.plot(
-            detector_fft.real[1:],  # type: ignore
-            ".C0",
-            label="Real",
-        )
-        intensity_axis.plot(
-            detector_fft.imag[1:],  # type: ignore
-            ".C1",
-            label="Imaginary",
-        )
-
-    def draw_fft_distance_plots(
-        self,
-        detector_data: np.ndarray,
-        motor_data: np.ndarray,
-    ) -> None:
-        """Draw the data as a function of distance, using a Fourier transform."""
-        by_position = (
-            self.by_position(detector_data, motor_data)
-            .with_columns(pl.col("intensity").list.median())
-            .to_numpy()
-        )
-
-        # Compute the FFTs
-        detector_fft = fft.rfft(by_position[:, 1] * 100)
-
-        # Create the axis
-        intensity_axis = self.figure.add_subplot()
-
-        # Set the display settings
-        intensity_axis.set_xlabel("Wavenumber (1/mm)")
-        intensity_axis.set_ylabel("Intensity (%)")
-
-        # Plot the data
-        intensity_axis.plot(
-            detector_fft.real[1:],  # type: ignore
-            ".C0",
-            label="Real",
-        )
-        intensity_axis.plot(
-            detector_fft.imag[1:],  # type: ignore
-            ".C1",
-            label="Imaginary",
-        )
-
-    def draw_plot(
-        self,
-        detector_data: np.ndarray,
-        motor_data: np.ndarray,
-    ) -> None:
-        """Redraw the plot with the given data."""
-
-        # Create the figure and axes
-        self.figure.clear(keep_observers=True)
-
-        # Draw the data
-        plot_mode: str = self.plot_mode.get_active_name()
-        match plot_mode:
-            case "time":
-                self.draw_time_plots(detector_data, motor_data)
-            case "distance":
-                self.draw_distance_plots(detector_data, motor_data)
-            case "fourier_time":
-                self.draw_fft_time_plots(detector_data, motor_data)
-            case "fourier_distance":
-                self.draw_fft_distance_plots(detector_data, motor_data)
-            case _:
-                raise ValueError(f"Unknown plot mode: {plot_mode}")
-
-        # Add the legends
-        legend = self.figure.legend(loc="outside upper right")
-
-        # Ugh, we can't set this properly via rcParams
-        legend.get_frame().set_alpha(None)
-        legend.get_frame().set_facecolor(TRANSPARENT_COLOUR)
-
-        # Redraw the canvas
-        self.canvas.draw()
+    # Save the data
+    data.write_csv(
+        path,
+        include_header=True,
+        line_terminator="\n",
+        separator="\t",
+        quote_style="never",
+        null_value="null",
+    )

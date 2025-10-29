@@ -17,7 +17,7 @@ from time import sleep
 
 import numpy as np
 
-from . import devices, utils
+from . import devices, plots, utils
 
 # GTK imports
 import gi
@@ -25,7 +25,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # type: ignore
+from gi.repository import Adw, Gio, GLib, Gtk  # type: ignore
 
 #################
 ### Constants ###
@@ -42,7 +42,7 @@ TSV_HEADER = (
     "detector_time",
     "detector_intensity",
 )
-
+MISSING_DATA_VALUE = np.nan
 
 #########################
 ### Class Definitions ###
@@ -139,7 +139,7 @@ class MainWindow(Adw.ApplicationWindow):
     def _initialize_plotter(self) -> None:
         """Initialize the plotter."""
         # Create the plotter
-        self.plotter = utils.Plotter(plot_mode=self.plot_mode)
+        self.plotter = plots.Plotter(plot_mode=self.plot_mode)
         self.plot_bin.set_child(self.plotter.canvas)
         utils.start_thread(self._plot_thread)
 
@@ -302,31 +302,12 @@ class MainWindow(Adw.ApplicationWindow):
         if file is None:
             return
 
-        # Make sure that the file has a .tsv extension
-        path = Path(file.get_path()).with_suffix(".tsv")  # type: ignore
+        path = file.get_path()
+        if path is None:
+            return
 
-        # Open the file and write the data
-        with path.open("w") as f:
-            writer = csv_writer(f, dialect=excel_tab)
-
-            # Write the header
-            writer.writerow(TSV_HEADER)
-
-            # Write the data
-            for (motor_time, motor_position), (
-                detector_time,
-                detector_intensity,
-            ) in zip_longest(
-                self.motor.data, self.detector.data, fillvalue=(np.nan, np.nan)
-            ):
-                writer.writerow(
-                    (
-                        motor_time,
-                        motor_position,
-                        detector_time,
-                        detector_intensity,
-                    )
-                )
+        # Save the data
+        utils.save_data(path, self.motor.data, self.detector.data)
 
     @Gtk.Template.Callback()
     def clear_data(self, button: Gtk.Button) -> None:

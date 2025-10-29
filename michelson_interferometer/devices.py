@@ -22,7 +22,7 @@ with catch_warnings(category=UserWarning, action="ignore", lineno=15):
     from pylablib.core.devio.SCPI import SCPIDevice
     from pylablib.devices.Thorlabs import KinesisMotor, ThorlabsError
 
-from .utils import start_thread
+from . import utils
 
 #################
 ### Constants ###
@@ -85,11 +85,11 @@ class Motor:
 
         # Initialize the variables
         self.on_update = on_update
-        self.data: list[tuple[float, float]] = []
+        self.data: utils.DeviceTimeValues = []
         self._current_speed = INVALID_SPEED
 
         # Initialize the thread
-        self._thread = start_thread(self._run_thread)
+        self._thread = utils.start_thread(self._run_thread)
         self._queue: Queue[
             tuple[Callable[[float], None], float]
             | tuple[Callable[[None], None], None]
@@ -218,11 +218,11 @@ class Detector:
 
         # Initialize the variables
         self.on_update = on_update
-        self.data: list[tuple[float, float]] = []
+        self.data: utils.DeviceTimeValues = []
 
         # Initialize the thread
         self._lock = Lock()
-        self._thread = start_thread(self._run_thread)
+        self._thread = utils.start_thread(self._run_thread)
 
         # Verify connection
         if not self._device.get_id():
