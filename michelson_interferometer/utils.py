@@ -19,7 +19,7 @@ import polars as pl
 ########################
 
 # 2-column numpy array, used for processing the data.
-FloatColumns = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+FloatColumns = np.ndarray[tuple, np.dtype[np.float64]]
 
 # List of (time, value) tuples. We're using this instead of a numpy array
 # because Python lists are thread-safe.

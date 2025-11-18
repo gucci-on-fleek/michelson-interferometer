@@ -17,7 +17,7 @@ from collections import namedtuple
 #################
 
 MAX_INTENSITY = 2**16 - 1  # 16-bit detector
-SHORT_SLEEP = 1 / 120  # seconds
+SHORT_SLEEP = 1 / 2400  # seconds
 LONG_SLEEP = 1 / 6  # seconds
 
 #########################

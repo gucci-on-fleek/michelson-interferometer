@@ -7,9 +7,12 @@
 ### Imports ###
 ###############
 
+from math import ceil
+
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_gtk4cairo import (
-    FigureCanvasGTK4Cairo as FigureCanvas,
+import matplotlib.style as mplstyle
+from matplotlib.backends.backend_gtk4agg import (
+    FigureCanvasGTK4Agg as FigureCanvas,
 )
 from matplotlib.figure import Figure
 from matplotlib.rcsetup import cycler
@@ -35,8 +38,9 @@ RGBAColour = tuple[float, float, float, float]
 ### Constants ###
 #################
 
-TRANSPARENT_COLOUR: RGBAColour = (0.0, 0.0, 0.0, 0.0)
+MAX_PLOT_POINTS = 1_000
 PLOT_COLOUR_NAMES = ("BLUE", "ORANGE")
+TRANSPARENT_COLOUR: RGBAColour = (0.0, 0.0, 0.0, 0.0)
 
 
 ############################
@@ -74,6 +78,7 @@ class Plotter:
         self._set_foreground_colour(plot_mode)
         self._set_grid()
         self._set_plot_colours()
+        mplstyle.use("fast")
 
         # Use a sensible layout rather than the horrible default
         plt.rcParams["figure.constrained_layout.use"] = True
@@ -169,6 +174,7 @@ class Plotter:
         self,
         detector_data: utils.FloatColumns,
         motor_data: utils.FloatColumns,
+        plot_spacing: int,
     ) -> None:
         """Draw the data as a function of time on the figure."""
         # Create the axes
@@ -188,12 +194,14 @@ class Plotter:
                 detector_data[:, 1] * 100,
                 ".C0",
                 label="Detector",
+                markevery=plot_spacing,
             )
             position_axis.plot(
                 motor_data[:, 0] - motor_data[0, 0],
                 motor_data[:, 1],
                 ".C1",
                 label="Mirror",
+                markevery=plot_spacing,
             )
         except IndexError:
             pass
@@ -202,6 +210,7 @@ class Plotter:
         self,
         detector_data: utils.FloatColumns,
         motor_data: utils.FloatColumns,
+        plot_spacing: int,
     ) -> None:
         """Draw the data as a function of distance on the figure."""
         by_position = utils.dataframe_merge_nested(
@@ -221,12 +230,14 @@ class Plotter:
             by_position[:, 1] * 100,
             ".C0",
             label="Intensity",
+            markevery=plot_spacing,
         )
 
     def draw_fft_time_plots(
         self,
         detector_data: utils.FloatColumns,
         motor_data: utils.FloatColumns,
+        plot_spacing: int,
     ) -> None:
         """Draw the data as a function of time, using a Fourier transform."""
         # Compute the FFTs
@@ -240,13 +251,24 @@ class Plotter:
         intensity_axis.set_ylabel("Intensity (%)")
 
         # Plot the data
-        intensity_axis.plot(real, ".C0", label="Real")
-        intensity_axis.plot(imag, ".C1", label="Imaginary")
+        intensity_axis.plot(
+            real,
+            ".C0",
+            label="Real",
+            markevery=plot_spacing,
+        )
+        intensity_axis.plot(
+            imag,
+            ".C1",
+            label="Imaginary",
+            markevery=plot_spacing,
+        )
 
     def draw_fft_distance_plots(
         self,
         detector_data: utils.FloatColumns,
         motor_data: utils.FloatColumns,
+        plot_spacing: int,
     ) -> None:
         """Draw the data as a function of distance, using a Fourier transform."""
         by_position = utils.dataframe_median_nested(
@@ -264,8 +286,18 @@ class Plotter:
         intensity_axis.set_ylabel("Intensity (%)")
 
         # Plot the data
-        intensity_axis.plot(real, ".C0", label="Real")
-        intensity_axis.plot(imag, ".C1", label="Imaginary")
+        intensity_axis.plot(
+            real,
+            ".C0",
+            label="Real",
+            markevery=plot_spacing,
+        )
+        intensity_axis.plot(
+            imag,
+            ".C1",
+            label="Imaginary",
+            markevery=plot_spacing,
+        )
 
     def draw_plot(
         self,
@@ -277,19 +309,26 @@ class Plotter:
         # Create the figure and axes
         self.figure.clear(keep_observers=True)
 
+        # Determine the plot spacing
+        num_points = max(len(detector_data), len(motor_data))
+        plot_spacing = max(1, ceil(num_points / MAX_PLOT_POINTS))
+        print(f"Plot spacing: {plot_spacing}")
+        print(f"Number of points: {num_points // plot_spacing}")
+
         # Draw the data
         plot_mode: str = self.plot_mode.get_active_name()
         match plot_mode:
             case "time":
-                self.draw_time_plots(detector_data, motor_data)
+                plot_func = self.draw_time_plots
             case "distance":
-                self.draw_distance_plots(detector_data, motor_data)
+                plot_func = self.draw_distance_plots
             case "fourier_time":
-                self.draw_fft_time_plots(detector_data, motor_data)
+                plot_func = self.draw_fft_time_plots
             case "fourier_distance":
-                self.draw_fft_distance_plots(detector_data, motor_data)
+                plot_func = self.draw_fft_distance_plots
             case _:
                 raise ValueError(f"Unknown plot mode: {plot_mode}")
+        plot_func(detector_data, motor_data, plot_spacing)
 
         # Add the legends
         legend = self.figure.legend(loc="outside upper right")

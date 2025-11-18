@@ -42,7 +42,7 @@ DETECTOR_BAUD = 115_200
 DETECTOR_TIMEOUT = 0.05  # seconds
 DETECTOR_NL = "\n"
 
-SLEEP_DURATION = 1 / 120  # seconds
+SLEEP_DURATION = 0  # seconds
 
 MAX_INTENSITY = 2**16 - 1  # 16-bit detector
 
