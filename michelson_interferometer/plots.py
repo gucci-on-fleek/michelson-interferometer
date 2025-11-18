@@ -11,6 +11,7 @@ from math import ceil
 
 import matplotlib.pyplot as plt
 import matplotlib.style as mplstyle
+import numpy as np
 from matplotlib.backends.backend_gtk4agg import (
     FigureCanvasGTK4Agg as FigureCanvas,
 )
@@ -18,6 +19,7 @@ from matplotlib.figure import Figure
 from matplotlib.rcsetup import cycler
 
 from . import utils
+from .spectral_colours import SPECTRAL_COLOURS, RGBColour
 
 # GTK imports
 import gi
@@ -38,7 +40,10 @@ RGBAColour = tuple[float, float, float, float]
 ### Constants ###
 #################
 
+LOMB_SCARGLE_SAMPLES = 1_000
 MAX_PLOT_POINTS = 1_000
+METRES_TO_NANOMETRES = 1e9
+MILLIMETRES_TO_METRES = 1e-3
 PLOT_COLOUR_NAMES = ("BLUE", "ORANGE")
 TRANSPARENT_COLOUR: RGBAColour = (0.0, 0.0, 0.0, 0.0)
 
@@ -57,6 +62,21 @@ def gdk_colour_to_tuple(gdk_colour: Gdk.RGBA) -> RGBAColour:
         gdk_colour.blue,
         gdk_colour.alpha,
     )
+
+
+def _spectral_colourmap(wavelength: float) -> RGBColour:
+    """Get the RGB colour for a given wavelength in metres."""
+    nm = int(round(wavelength * 1e9))
+    if nm < 390:
+        nm = 390
+    elif nm > 780:
+        nm = 780
+    return SPECTRAL_COLOURS[nm]
+
+
+def spectral_colourmap(wavelengths: np.ndarray) -> np.ndarray:
+    """Get the RGB colours for a given array of wavelengths in metres."""
+    return np.array([_spectral_colourmap(wl) for wl in wavelengths])
 
 
 #########################
@@ -213,9 +233,8 @@ class Plotter:
         plot_spacing: int,
     ) -> None:
         """Draw the data as a function of distance on the figure."""
-        by_position = utils.dataframe_merge_nested(
-            utils.by_time_to_by_position(detector_data, motor_data)
-        )
+        motor, detector = utils.parse_data(motor_data, detector_data)
+        by_position = utils.interpolate_motion(motor, detector)
 
         # Create the axis
         intensity_axis = self.figure.add_subplot()
@@ -233,70 +252,43 @@ class Plotter:
             markevery=plot_spacing,
         )
 
-    def draw_fft_time_plots(
+    def draw_wavelength_plots(
         self,
         detector_data: utils.FloatColumns,
         motor_data: utils.FloatColumns,
         plot_spacing: int,
     ) -> None:
         """Draw the data as a function of time, using a Fourier transform."""
-        # Compute the FFTs
-        real, imag = utils.fourier_transform(detector_data[:, 1] * 100)
+        # Get the data by position
+        motor, detector = utils.parse_data(motor_data, detector_data)
+        by_position = utils.interpolate_motion(motor, detector)
+
+        # Perform the Lomb-Scargle transform
+        try:
+            wavelengths, spectral_power = utils.lomb_scargle(
+                distances=by_position[:, 0] * MILLIMETRES_TO_METRES,
+                intensities=by_position[:, 1],
+                sample_count=LOMB_SCARGLE_SAMPLES,
+            )
+        except ValueError:
+            return
+        spectral_power = utils.remove_noise_floor(spectral_power)
 
         # Create the axis
         intensity_axis = self.figure.add_subplot()
 
         # Set the display settings
-        intensity_axis.set_xlabel("Frequency (Hz)")
-        intensity_axis.set_ylabel("Intensity (%)")
+        intensity_axis.set_xlabel("Wavelength (nm)")
+        intensity_axis.set_ylabel("Spectral Power (%)")
 
         # Plot the data
-        intensity_axis.plot(
-            real,
-            ".C0",
-            label="Real",
-            markevery=plot_spacing,
-        )
-        intensity_axis.plot(
-            imag,
-            ".C1",
-            label="Imaginary",
-            markevery=plot_spacing,
-        )
-
-    def draw_fft_distance_plots(
-        self,
-        detector_data: utils.FloatColumns,
-        motor_data: utils.FloatColumns,
-        plot_spacing: int,
-    ) -> None:
-        """Draw the data as a function of distance, using a Fourier transform."""
-        by_position = utils.dataframe_median_nested(
-            utils.by_time_to_by_position(detector_data, motor_data)
-        )
-
-        # Compute the FFTs
-        real, imag = utils.fourier_transform(by_position[:, 1] * 100)
-
-        # Create the axis
-        intensity_axis = self.figure.add_subplot()
-
-        # Set the display settings
-        intensity_axis.set_xlabel("Wavenumber (1/mm)")
-        intensity_axis.set_ylabel("Intensity (%)")
-
-        # Plot the data
-        intensity_axis.plot(
-            real,
-            ".C0",
-            label="Real",
-            markevery=plot_spacing,
-        )
-        intensity_axis.plot(
-            imag,
-            ".C1",
-            label="Imaginary",
-            markevery=plot_spacing,
+        intensity_axis.scatter(
+            x=wavelengths * METRES_TO_NANOMETRES,
+            y=spectral_power,
+            s=5,
+            c=spectral_colourmap(wavelengths),
+            alpha=0.75,
+            label="Spectral Power",
         )
 
     def draw_plot(
@@ -322,10 +314,8 @@ class Plotter:
                 plot_func = self.draw_time_plots
             case "distance":
                 plot_func = self.draw_distance_plots
-            case "fourier_time":
-                plot_func = self.draw_fft_time_plots
-            case "fourier_distance":
-                plot_func = self.draw_fft_distance_plots
+            case "wavelength":
+                plot_func = self.draw_wavelength_plots
             case _:
                 raise ValueError(f"Unknown plot mode: {plot_mode}")
         plot_func(detector_data, motor_data, plot_spacing)

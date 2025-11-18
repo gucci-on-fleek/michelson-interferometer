@@ -13,6 +13,7 @@ from typing import Callable
 
 import numpy as np
 import polars as pl
+from scipy import signal
 
 ########################
 ### Type Definitions ###
@@ -24,6 +25,17 @@ FloatColumns = np.ndarray[tuple, np.dtype[np.float64]]
 # List of (time, value) tuples. We're using this instead of a numpy array
 # because Python lists are thread-safe.
 DeviceTimeValues = list[tuple[float, float]]
+
+#################
+### Constants ###
+#################
+
+# Lomb–Scargle constants
+BLUEST_VISIBLE_WAVELENGTH = 390e-9
+FREQUENCY_TO_ANGULAR_FREQUENCY = 2.0 * np.pi
+INTERFEROMETER_FREQUENCY_FACTOR = 2.0
+REDDEST_VISIBLE_WAVELENGTH = 700e-9
+THRESHOLD_QUANTILE = 0.90  # 90th percentile
 
 
 ############################
@@ -40,61 +52,147 @@ def start_thread(func: Callable, *args) -> Thread:
     return thread
 
 
-def by_time_to_by_position(
-    detector_data: FloatColumns,
-    motor_data: FloatColumns,
-) -> pl.DataFrame:
-    """Converts the data from time-based to position-based."""
-    # Convert to Polars DataFrames
+def parse_data(
+    motor_np: FloatColumns,
+    detector_np: FloatColumns,
+) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """Parse the raw motor and detector data into DataFrames."""
+
+    motor = pl.DataFrame(
+        motor_np,
+        schema=(("time", pl.Float64), ("position", pl.Float64)),
+    ).with_columns(
+        pl.col("time") - pl.col("time").min(),
+    )
+
     detector = pl.DataFrame(
-        detector_data, schema=["time", "intensity"]
-    ).with_columns(pl.from_epoch("time", time_unit="s"))
-
-    motor = pl.DataFrame(motor_data, schema=["time", "position"]).with_columns(
-        pl.from_epoch("time", time_unit="s"),
+        detector_np,
+        schema=(("time", pl.Float64), ("intensity", pl.Float64)),
+    ).with_columns(
+        pl.col("time") - pl.col("time").min(),
     )
 
-    # Join the data
-    by_position = (
-        motor.join_asof(
-            detector,
-            on="time",
-            strategy="nearest",
+    return motor, detector
+
+
+def trim_endpoints(
+    motor: pl.DataFrame,
+    detector: pl.DataFrame,
+) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """Trim the endpoints of the motor data where no motion occurred."""
+
+    last_position = motor.select(pl.col("position").last()).item()
+    end_time = (
+        motor.filter(
+            pl.col("position") == last_position,
         )
-        .select(
-            pl.col("position").round(3),
-            pl.col("intensity"),
+        .select(pl.col("time"))
+        .min()
+        .item()
+    )
+
+    first_position = motor.select(pl.col("position").first()).item()
+    start_time = (
+        motor.filter(
+            pl.col("position") == first_position,
         )
-        .group_by("position")
-        .agg(pl.col("intensity"))
+        .select(pl.col("time"))
+        .max()
+        .item()
+    )
+
+    motor = motor.filter(
+        pl.col("time") >= start_time,
+        pl.col("time") <= end_time,
+    )
+    detector = detector.filter(
+        pl.col("time") >= start_time,
+        pl.col("time") <= end_time,
+    )
+    return motor, detector
+
+
+def interpolate_motion(
+    motor_np: pl.DataFrame,
+    detector_np: pl.DataFrame,
+) -> FloatColumns:
+    """Interpolate the motor positions.
+
+    The motor rounds its position data to the nearest 0.005mm, but it moves
+    smoothly between measurements. To counteract this, we will select only the
+    middle point in a run of identical position measurements, and linearly interpolate between them.
+    """
+
+    motor = pl.DataFrame(
+        motor_np,
+        schema=(("time", pl.Float64), ("position", pl.Float64)),
+    )
+    detector = pl.DataFrame(
+        detector_np,
+        schema=(("time", pl.Float64), ("intensity", pl.Float64)),
+    )
+
+    motor, detector = trim_endpoints(motor, detector)
+
+    midpoint_positions = (
+        motor.group_by("position")
+        .agg(pl.first().quantile(0.5, interpolation="nearest"))
         .sort("position")
+        .select(
+            pl.col("time"),
+            pl.col("position"),
+        )
     )
 
-    return by_position
+    interpolated = (
+        midpoint_positions.join(
+            other=detector,
+            on="time",
+            how="full",
+            coalesce=True,
+        )
+        .sort("time")
+        .with_columns(pl.col("position").interpolate_by("time"))
+        .drop_nulls(("position", "intensity"))
+    )
 
-
-def dataframe_merge_nested(data: pl.DataFrame) -> FloatColumns:
-    """Merges the contents of arrays nested in columns into a single column."""
-    return data.explode(
-        pl.last(),  # type: ignore[arg-type]
+    return interpolated.select(
+        pl.col("position"),
+        pl.col("intensity"),
     ).to_numpy()
 
 
-def dataframe_median_nested(data: pl.DataFrame) -> FloatColumns:
-    """Computes the median of arrays nested in columns."""
-    return data.with_columns(pl.last().list.median()).to_numpy()
+def lomb_scargle(
+    distances: np.ndarray,
+    intensities: np.ndarray,
+    sample_count: int,
+) -> tuple[FloatColumns, FloatColumns]:
+    """Compute the Lomb-Scargle periodogram of the given data."""
+
+    wavelengths = np.linspace(
+        REDDEST_VISIBLE_WAVELENGTH, BLUEST_VISIBLE_WAVELENGTH, sample_count
+    )
+
+    wavenumbers = INTERFEROMETER_FREQUENCY_FACTOR / wavelengths
+
+    spectral_power = signal.lombscargle(
+        x=distances,
+        y=intensities,
+        freqs=wavenumbers * FREQUENCY_TO_ANGULAR_FREQUENCY,
+        normalize="normalize",  # type: ignore[arg-type]
+        precenter=True,
+    )
+
+    return wavelengths, spectral_power  # type: ignore[return-value]
 
 
-def fourier_transform(data: FloatColumns) -> tuple[FloatColumns, FloatColumns]:
-    """Computes the Fourier transform of the data, returning the real and
-    imaginary parts."""
-    complex = np.fft.rfft(data)
+def remove_noise_floor(
+    spectral_power: np.ndarray,
+) -> np.ndarray:
+    """Remove the noise floor from the spectral power data."""
 
-    # The first element is the constant offset, which we don't care about, so
-    # we'll zero it out.
-    complex[0] = 0
-
-    return complex.real, complex.imag
+    threshold = np.quantile(spectral_power, THRESHOLD_QUANTILE)
+    return np.clip(spectral_power - threshold, 0, None)
 
 
 def save_data(
