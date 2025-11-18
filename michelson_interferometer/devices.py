@@ -42,7 +42,7 @@ DETECTOR_BAUD = 115_200
 DETECTOR_TIMEOUT = 0.05  # seconds
 DETECTOR_NL = "\n"
 
-SLEEP_DURATION = 0  # seconds
+SLEEP_DURATION = 1 / 120  # seconds
 
 MAX_INTENSITY = 2**16 - 1  # 16-bit detector
 
@@ -178,7 +178,7 @@ class Motor:
         # Every second cycle, run a command from the queue. Otherwise, get the
         # current position.
         for should_get_position in cycle([True, False]):
-            sleep(SLEEP_DURATION)
+            # sleep(SLEEP_DURATION)
             if should_get_position:
                 func, arg = self._get_position, None
             else:
@@ -255,7 +255,7 @@ class Detector:
     def _run_thread(self) -> None:
         """Calls the on_update callback with the current intensity."""
         while True:
-            sleep(SLEEP_DURATION)
+            # sleep(SLEEP_DURATION)
 
             try:
                 intensity = self.intensity
