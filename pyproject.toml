@@ -11,8 +11,9 @@ version = "0"
 
 dependencies = [
     "matplotlib ~= 3.10",
-    "pylablib-lightweight[extra, devio] ~= 1.4",
+    "pylablib-lightweight[devio] ~= 1.4",
     "polars ~= 1.34.0",
+    "scipy < 1.15",
 ]
 
 [project.optional-dependencies]
