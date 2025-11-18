@@ -37,12 +37,16 @@ Installation
 
 3. (Optional) OSTree is insanely slow over NFS, so if you're installing
    this as an unprivileged user, you should link your Flatpak
-   installation folder to a local directory:
+   installation folder to a local directory to speed things up:
 
    ```console
    $ mkdir -p /var/tmp/$USER/flatpak
    $ ln -s /var/tmp/$USER/flatpak ~/.local/share/flatpak
    ```
+
+   If you install the Flatpak as root (by running replacing `flatpak
+   install --user` with `sudo flatpak install` in the next step), you
+   do not need to do this.
 
 4. Install the Flatpak bundle by running
 
@@ -87,3 +91,9 @@ variable to use random data instead of real hardware devices:
 ```console
 $ MI_FAKE_DEVICES=1 make run-flatpak
 ```
+
+Notes
+-----
+
+- Changing the speed of the motor is really buggy, so if it's not
+  working, you'll probably have to restart the application.
