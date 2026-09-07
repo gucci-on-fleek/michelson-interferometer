@@ -63,7 +63,7 @@ dev = [
     # We use a Makefile to manage the build process, so use setuptools to
     # generate the wheel. Once again, we pin this to the exact version of
     # setuptools that's installed in the Gnome Flatpak SDK.
-    "setuptools == 80.9.0",
+    "setuptools == 83.0.0",
 
     # Provides the type stubs for PyGObject.
     "pygobject-stubs ~= 2.13.0",
@@ -76,7 +76,7 @@ dev = [
 
 [build-system]
 # Should be identical to the "dev" group above.
-requires = ["setuptools == 80.9.0", "pygobject-stubs ~= 2.13.0"]
+requires = ["setuptools == 83.0.0", "pygobject-stubs ~= 2.13.0"]
 
 # Use setuptools to build the project.
 build-backend = "setuptools.build_meta"
