@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MPL-2.0+
 # SPDX-FileCopyrightText: 2025 Max Chernoff
 
-__pycache__
+__pycache__/
 .venv
 *.egg-info
 *.ui
-build
+build/
 ca.maxchernoff.michelson_interferometer.source.svg

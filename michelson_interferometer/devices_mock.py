@@ -1,16 +1,20 @@
 # Michelson Interferometer Control Software
 # https://github.com/gucci-on-fleek/michelson-interferometer
 # SPDX-License-Identifier: MPL-2.0+
-# SPDX-FileCopyrightText: 2025 Max Chernoff
+# SPDX-FileCopyrightText: 2026 Max Chernoff
+
+"""Mock devices for testing purposes."""
+
+# ruff: disable[undocumented-public-method, undocumented-public-init]
 
 ###############
 ### Imports ###
 ###############
 
-from typing import Any
 from random import randint
 from time import sleep
-from collections import namedtuple
+from typing import Any, NamedTuple
+
 
 #################
 ### Constants ###
@@ -24,7 +28,11 @@ LONG_SLEEP = 1 / 6  # seconds
 ### Class Definitions ###
 #########################
 
-VelocityParameters = namedtuple("VelocityParameters", ["max_velocity"])
+
+class VelocityParameters(NamedTuple):
+    """Velocity parameters for a `KinesisMotor`."""
+
+    max_velocity: float
 
 
 class KinesisMotor:
@@ -35,19 +43,23 @@ class KinesisMotor:
         self._position = 0.0
         self._speed = 0.0
 
-    def wait_for_stop(self) -> None:
+    @staticmethod
+    def wait_for_stop() -> None:
         print("(KinesisMotor) wait_for_stop()")
         sleep(LONG_SLEEP)
 
-    def _enable_channel(self, enabled: bool) -> None:
+    @staticmethod
+    def _enable_channel(enabled: bool) -> None:
         print(f"(KinesisMotor) _enable_channel({enabled!r})")
         sleep(SHORT_SLEEP)
 
-    def home(self, force: bool, sync: bool) -> None:
+    @staticmethod
+    def home(force: bool, sync: bool) -> None:
         print(f"(KinesisMotor) home({force!r}, {sync!r})")
         sleep(SHORT_SLEEP)
 
-    def stop(self) -> None:
+    @staticmethod
+    def stop() -> None:
         print("(KinesisMotor) stop()")
         sleep(SHORT_SLEEP)
 
@@ -84,7 +96,8 @@ class SCPIDevice:
 
         self._gain = 0
 
-    def get_id(self) -> str:
+    @staticmethod
+    def get_id() -> str:
         print('(SCPIDevice) get_idn() -> "MOCK_DEVICE,MODEL_1234,SN0001,1.0"')
         sleep(SHORT_SLEEP)
         return "MOCK_DEVICE,MODEL_1234,SN0001,1.0"

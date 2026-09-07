@@ -1,7 +1,9 @@
 # Michelson Interferometer Control Software
 # https://github.com/gucci-on-fleek/michelson-interferometer
 # SPDX-License-Identifier: MPL-2.0+
-# SPDX-FileCopyrightText: 2025 Max Chernoff
+# SPDX-FileCopyrightText: 2026 Max Chernoff
+
+"""Plot the data from the Michelson interferometer."""
 
 ###############
 ### Imports ###
@@ -16,18 +18,27 @@ from matplotlib.backends.backend_gtk4agg import (
     FigureCanvasGTK4Agg as FigureCanvas,
 )
 from matplotlib.figure import Figure
-from matplotlib.rcsetup import cycler
+from matplotlib.rcsetup import (
+    cycler,  # pyright: ignore[reportUnknownVariableType]
+)
 
 from . import utils
-from .spectral_colours import SPECTRAL_COLOURS, RGBColour
+from .spectral_colours import (
+    MAX_SPECTRAL_WAVELENGTH,
+    MIN_SPECTRAL_WAVELENGTH,
+    SPECTRAL_COLOURS,
+    RGBColour,
+)
 
 # GTK imports
 import gi
+
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gdk, Gtk  # type: ignore
+
 
 ########################
 ### Type Definitions ###
@@ -54,7 +65,7 @@ TRANSPARENT_COLOUR: RGBAColour = (0.0, 0.0, 0.0, 0.0)
 
 
 def gdk_colour_to_tuple(gdk_colour: Gdk.RGBA) -> RGBAColour:
-    """Gets the RGBA tuple for a GDK colour."""
+    """Get the RGBA tuple for a GDK colour."""
 
     return (
         gdk_colour.red,
@@ -66,16 +77,18 @@ def gdk_colour_to_tuple(gdk_colour: Gdk.RGBA) -> RGBAColour:
 
 def _spectral_colourmap(wavelength: float) -> RGBColour:
     """Get the RGB colour for a given wavelength in metres."""
-    nm = int(round(wavelength * 1e9))
-    if nm < 390:
-        nm = 390
-    elif nm > 780:
-        nm = 780
+
+    nm = round(wavelength * 1e9)
+    if nm < MIN_SPECTRAL_WAVELENGTH:
+        nm = MIN_SPECTRAL_WAVELENGTH
+    elif nm > MAX_SPECTRAL_WAVELENGTH:
+        nm = MAX_SPECTRAL_WAVELENGTH
     return SPECTRAL_COLOURS[nm]
 
 
 def spectral_colourmap(wavelengths: np.ndarray) -> np.ndarray:
     """Get the RGB colours for a given array of wavelengths in metres."""
+
     return np.array([_spectral_colourmap(wl) for wl in wavelengths])
 
 
@@ -89,9 +102,10 @@ class Plotter:
 
     def __init__(
         self,
-        plot_mode: Adw.ToggleGroup,  # type: ignore
+        plot_mode: Adw.ToggleGroup,
     ) -> None:
         """Configure the matplotlib settings."""
+
         # Set the matplotlib parameters
         self._set_font()
         self._set_background_colour()
@@ -108,20 +122,24 @@ class Plotter:
         self.canvas = FigureCanvas(self.figure)
         self.plot_mode = plot_mode
 
-    def _set_font(self) -> None:
+    @staticmethod
+    def _set_font() -> None:
         """Set the matplotlib font parameters."""
+
         # Get the font name and size
         adw_style = Adw.StyleManager.get_default()
 
-        name_and_size: str = adw_style.get_document_font_name()  # type: ignore
+        name_and_size: str = adw_style.get_document_font_name()
         name, size = name_and_size.rsplit(" ", 1)
 
         # Set the font parameters
         plt.rcParams["font.family"] = name
         plt.rcParams["font.size"] = int(size)
 
-    def _set_background_colour(self) -> None:
+    @staticmethod
+    def _set_background_colour() -> None:
         """Set the background colour of the matplotlib plots."""
+
         # Set the background of the matplotlib canvas to be transparent
         css = Gtk.CssProvider()
         css.load_from_string(
@@ -137,10 +155,12 @@ class Plotter:
         plt.rcParams["figure.facecolor"] = TRANSPARENT_COLOUR
         plt.rcParams["axes.facecolor"] = TRANSPARENT_COLOUR
 
-    def _set_foreground_colour(self, window: Adw.ApplicationWindow) -> None:
+    @staticmethod
+    def _set_foreground_colour(toggle: Adw.ToggleGroup) -> None:
         """Set the foreground colour of the matplotlib plots."""
+
         # Get the text colour
-        text_colour = gdk_colour_to_tuple(window.get_color())
+        text_colour = gdk_colour_to_tuple(toggle.get_color())
 
         # Set the colours
         plt.rcParams["axes.edgecolor"] = text_colour
@@ -149,8 +169,10 @@ class Plotter:
         plt.rcParams["xtick.color"] = text_colour
         plt.rcParams["ytick.color"] = text_colour
 
-    def _set_grid(self) -> None:
+    @staticmethod
+    def _set_grid() -> None:
         """Set the grid parameters."""
+
         # Frame
         plt.rcParams["axes.spines.bottom"] = True
         plt.rcParams["axes.spines.left"] = True
@@ -173,8 +195,10 @@ class Plotter:
         plt.rcParams["xtick.minor.visible"] = True
         plt.rcParams["ytick.minor.visible"] = True
 
-    def _set_plot_colours(self) -> None:
+    @staticmethod
+    def _set_plot_colours() -> None:
         """Set the plot colours based on the current theme."""
+
         # See if dark mode is enabled or not
         adw_style = Adw.StyleManager.get_default()
         dark_mode = adw_style.get_dark()
@@ -182,8 +206,8 @@ class Plotter:
         # Get the plot colours
         plot_colours: list[RGBAColour] = []
         for colour_name in PLOT_COLOUR_NAMES:
-            colour_enum = getattr(Adw.AccentColor, colour_name)  # type: ignore
-            gdk_colour: Gdk.RGBA = Adw.AccentColor.to_standalone_rgba(  # type: ignore
+            colour_enum = getattr(Adw.AccentColor, colour_name)
+            gdk_colour: Gdk.RGBA = Adw.AccentColor.to_standalone_rgba(
                 colour_enum, dark_mode
             )
             plot_colours.append(gdk_colour_to_tuple(gdk_colour))
@@ -197,6 +221,7 @@ class Plotter:
         plot_spacing: int,
     ) -> None:
         """Draw the data as a function of time on the figure."""
+
         # Create the axes
         intensity_axis = self.figure.add_subplot()
         position_axis = intensity_axis.twinx()
@@ -233,6 +258,7 @@ class Plotter:
         plot_spacing: int,
     ) -> None:
         """Draw the data as a function of distance on the figure."""
+
         motor, detector = utils.parse_data(motor_data, detector_data)
         by_position = utils.interpolate_motion(motor, detector)
 
@@ -259,6 +285,7 @@ class Plotter:
         plot_spacing: int,
     ) -> None:
         """Draw the data as a function of time, using a Fourier transform."""
+
         # Get the data by position
         motor, detector = utils.parse_data(motor_data, detector_data)
         by_position = utils.interpolate_motion(motor, detector)
@@ -304,11 +331,11 @@ class Plotter:
         # Determine the plot spacing
         num_points = max(len(detector_data), len(motor_data))
         plot_spacing = max(1, ceil(num_points / MAX_PLOT_POINTS))
-        print(f"Plot spacing: {plot_spacing}")
-        print(f"Number of points: {num_points // plot_spacing}")
+        # print(f"Plot spacing: {plot_spacing}")
+        # print(f"Number of points: {num_points // plot_spacing}")
 
         # Draw the data
-        plot_mode: str = self.plot_mode.get_active_name()
+        plot_mode = self.plot_mode.get_active_name()
         match plot_mode:
             case "time":
                 plot_func = self.draw_time_plots
