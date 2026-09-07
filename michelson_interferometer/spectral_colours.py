@@ -1,3 +1,5 @@
+"""Convert a wavelength in nanometers to an RGB colour."""
+
 RGBColour = tuple[float, float, float]
 
 # Based off of https://github.com/Sven-J-Steinert/matplotlib/blob/485b0eb74218afad62f37eb641545517b6febc09/lib/matplotlib/_color_data.py#L1143-L1538
@@ -394,3 +396,6 @@ SPECTRAL_COLOURS: dict[int, RGBColour] = {
     779: (0.00138, 0.00000, 0.00000),
     780: (0.00128, 0.00000, 0.00000),
 }
+
+MIN_SPECTRAL_WAVELENGTH = min(SPECTRAL_COLOURS.keys())
+MAX_SPECTRAL_WAVELENGTH = max(SPECTRAL_COLOURS.keys())

@@ -1,26 +1,30 @@
 # Michelson Interferometer Control Software
 # https://github.com/gucci-on-fleek/michelson-interferometer
 # SPDX-License-Identifier: MPL-2.0+
-# SPDX-FileCopyrightText: 2025 Max Chernoff
+# SPDX-FileCopyrightText: 2026 Max Chernoff
+
+"""General-purpose utility functions."""
 
 ###############
 ### Imports ###
 ###############
 
+from collections.abc import Callable
 from pathlib import Path
 from threading import Thread
-from typing import Callable
+from typing import cast
 
 import numpy as np
 import polars as pl
 from scipy import signal
+
 
 ########################
 ### Type Definitions ###
 ########################
 
 # 2-column numpy array, used for processing the data.
-FloatColumns = np.ndarray[tuple, np.dtype[np.float64]]
+FloatColumns = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 
 # List of (time, value) tuples. We're using this instead of a numpy array
 # because Python lists are thread-safe.
@@ -43,10 +47,12 @@ THRESHOLD_QUANTILE = 0.90  # 90th percentile
 ############################
 
 
-def start_thread(func: Callable, *args) -> Thread:
+def start_thread[**P](
+    func: Callable[P, None], *args: P.args, **kwargs: P.kwargs
+) -> Thread:
     """Run a function in a separate thread."""
 
-    thread = Thread(target=func, args=args)
+    thread = Thread(target=func, args=args, kwargs=kwargs)
     thread.daemon = True
     thread.start()
     return thread
@@ -83,7 +89,8 @@ def trim_endpoints(
 
     last_position = motor.select(pl.col("position").last()).item()
     end_time = (
-        motor.filter(
+        motor
+        .filter(
             pl.col("position") == last_position,
         )
         .select(pl.col("time"))
@@ -93,7 +100,8 @@ def trim_endpoints(
 
     first_position = motor.select(pl.col("position").first()).item()
     start_time = (
-        motor.filter(
+        motor
+        .filter(
             pl.col("position") == first_position,
         )
         .select(pl.col("time"))
@@ -135,7 +143,8 @@ def interpolate_motion(
     motor, detector = trim_endpoints(motor, detector)
 
     midpoint_positions = (
-        motor.group_by("position")
+        motor
+        .group_by("position")
         .agg(pl.first().quantile(0.5, interpolation="nearest"))
         .sort("position")
         .select(
@@ -145,7 +154,8 @@ def interpolate_motion(
     )
 
     interpolated = (
-        midpoint_positions.join(
+        midpoint_positions
+        .join(
             other=detector,
             on="time",
             how="full",
@@ -175,15 +185,18 @@ def lomb_scargle(
 
     wavenumbers = INTERFEROMETER_FREQUENCY_FACTOR / wavelengths
 
-    spectral_power = signal.lombscargle(
-        x=distances,
-        y=intensities,
-        freqs=wavenumbers * FREQUENCY_TO_ANGULAR_FREQUENCY,
-        normalize="normalize",  # type: ignore[arg-type]
-        precenter=True,
+    spectral_power = cast(
+        FloatColumns,
+        signal.lombscargle(
+            x=distances,
+            y=intensities,
+            freqs=wavenumbers * FREQUENCY_TO_ANGULAR_FREQUENCY,
+            normalize="normalize",  # type: ignore[arg-type]
+            precenter=True,
+        ),
     )
 
-    return wavelengths, spectral_power  # type: ignore[return-value]
+    return wavelengths, spectral_power
 
 
 def remove_noise_floor(
@@ -200,7 +213,8 @@ def save_data(
     motor_data: DeviceTimeValues,
     detector_data: DeviceTimeValues,
 ) -> None:
-    """Saves the motor and detector data to a CSV file."""
+    """Save the motor and detector data to a CSV file."""
+
     # Create the DataFrame
     motor = pl.DataFrame(
         motor_data,

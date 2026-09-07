@@ -1,28 +1,32 @@
 # Michelson Interferometer Control Software
 # https://github.com/gucci-on-fleek/michelson-interferometer
 # SPDX-License-Identifier: MPL-2.0+
-# SPDX-FileCopyrightText: 2025 Max Chernoff
+# SPDX-FileCopyrightText: 2026 Max Chernoff
+
+"""Handle interfacing with the motor and detector devices."""
 
 ###############
 ### Imports ###
 ###############
 
+from collections.abc import Callable
 from glob import glob
 from itertools import cycle
 from os import environ
 from queue import Empty, Queue
 from threading import Lock
-from time import sleep
-from time import time as unix_time
+from time import sleep, time as unix_time
 from traceback import print_exc
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, cast
 from warnings import catch_warnings
+
 
 with catch_warnings(category=UserWarning, action="ignore", lineno=15):
     from pylablib.core.devio.SCPI import SCPIDevice
     from pylablib.devices.Thorlabs import KinesisMotor, ThorlabsError
 
 from . import utils
+
 
 #################
 ### Constants ###
@@ -72,11 +76,13 @@ class Motor:
     """Controls the motor that moves the mirror."""
 
     def __init__(self, on_update: Callable[[float], Any]) -> None:
+        """Initialize the motor."""
+
         # Initialize the device
         try:
-            path = glob(MOTOR_DEVICE_GLOB)[0]
+            path = glob(MOTOR_DEVICE_GLOB)[0]  # ruff: ignore[glob]
         except IndexError:
-            raise IOError("No motor device found")
+            raise OSError("No motor device found")
 
         self._device = KinesisMotor(
             path,
@@ -99,7 +105,8 @@ class Motor:
         self.home()
 
     def wait(self) -> None:
-        """Waits for the motor to finish any current movement."""
+        """Wait for the motor to finish any current movement."""
+
         sleep(2 * SLEEP_DURATION)
         try:
             self._device.wait_for_stop()
@@ -110,6 +117,7 @@ class Motor:
 
     def home(self) -> None:
         """Homes the motor."""
+
         self._current_speed = INVALID_SPEED  # Invalidate current speed
         self._queue.put((self._enable, None))
         self._queue.put((self._home, None))
@@ -121,7 +129,8 @@ class Motor:
         self._device.home(force=True, sync=False)
 
     def stop(self) -> None:
-        """Stops the motor."""
+        """Stop the motor."""
+
         self._queue.put((self._stop, None))
         self._queue.put((self._set_speed, MOTOR_MAX_SPEED))
 
@@ -130,7 +139,8 @@ class Motor:
 
     @property
     def position(self) -> float:
-        """Gets the current position of the mirror in millimeters."""
+        """The current position of the mirror in millimeters."""
+
         try:
             return self.data[-1][1]
         except IndexError:
@@ -138,7 +148,8 @@ class Motor:
             return self.data[-1][1]
 
     def _get_position(self, _: None) -> None:
-        """Gets the current position of the mirror and calls on_update."""
+        """Get the current position of the mirror and calls on_update."""
+
         position = self._device.get_position()
         self.data.append((unix_time(), position))
         self.on_update(position)
@@ -146,7 +157,8 @@ class Motor:
     def set_position(
         self, position: float, speed: float = MOTOR_MAX_SPEED
     ) -> None:
-        """Sets the position of the mirror in millimeters at a given speed."""
+        """Set the position of the mirror in millimeters at a given speed."""
+
         if speed != self._current_speed:
             self._queue.put((self._set_speed, speed))
         self._queue.put((self._set_position, position))
@@ -155,15 +167,19 @@ class Motor:
         self._device.move_to(position)
 
     def _set_speed(self, speed: float) -> None:
-        """Sets the speed of the motor in millimeters/second."""
+        """Set the speed of the motor in millimeters/second."""
+
         self._current_speed = speed
         for _ in range(3):
             try:
                 self._device.setup_velocity(max_velocity=speed, scale=True)
 
-                current_speed = self._device.get_velocity_parameters(
-                    scale=True
-                ).max_velocity
+                current_speed = cast(
+                    float,
+                    self._device.get_velocity_parameters(
+                        scale=True
+                    ).max_velocity,
+                )
 
                 if current_speed != speed:
                     raise ValueError("Speed not set correctly")
@@ -173,7 +189,7 @@ class Motor:
                 break
 
     def _run_thread(self) -> None:
-        """Runs the thread."""
+        """Run the thread."""
 
         # Every second cycle, run a command from the queue. Otherwise, get the
         # current position.
@@ -194,9 +210,9 @@ class Motor:
                 sleep(SLEEP_DURATION)
                 try:
                     func(arg)  # type: ignore[arg-type]
-                except:
+                except Exception:  # ruff: ignore[blind-except]
                     print_exc()
-            except:
+            except Exception:  # ruff: ignore[blind-except]
                 print_exc()
 
 
@@ -204,11 +220,13 @@ class Detector:
     """Controls the light intensity detector."""
 
     def __init__(self, on_update: Callable[[float], Any]) -> None:
+        """Initialize the detector."""
+
         # Initialize the device
         try:
-            path = glob(DETECTOR_DEVICE_GLOB)[0]
+            path = glob(DETECTOR_DEVICE_GLOB)[0]  # ruff: ignore[glob]
         except IndexError:
-            raise IOError("No detector device found")
+            raise OSError("No detector device found")
 
         self._device = SCPIDevice(
             (path, DETECTOR_BAUD),
@@ -226,40 +244,42 @@ class Detector:
 
         # Verify connection
         if not self._device.get_id():
-            raise IOError("Failed to connect to detector")
+            raise OSError("Failed to connect to detector")
 
     @property
     def gain(self) -> int:
-        """Gets the current position of the mirror in millimeters."""
+        """The current position of the mirror in millimeters."""
+
         with self._lock:
-            value = self._device.ask("det:gain?", "int")
+            value = cast(int, self._device.ask("det:gain?", "int"))
 
         assert isinstance(value, int)
         return value
 
     @gain.setter
     def gain(self, value: int) -> None:
-        """Sets the position of the mirror in millimeters."""
+        """Set the position of the mirror in millimeters."""
+
         with self._lock:
             self._device.write(f"det:gain {value}")
 
     @property
     def intensity(self) -> float:
-        """Gets the current light intensity reading from the detector."""
+        """The current light intensity reading from the detector."""
+
         with self._lock:
-            value = self._device.ask("det:meas?", "int")
+            value = cast(int, self._device.ask("det:meas?", "int"))
 
         assert isinstance(value, int)
         return value / MAX_INTENSITY
 
     def _run_thread(self) -> None:
-        """Calls the on_update callback with the current intensity."""
-        while True:
-            # sleep(SLEEP_DURATION)
+        """Call the on_update callback with the current intensity."""
 
+        while True:
             try:
                 intensity = self.intensity
-            except:
+            except Exception:  # ruff: ignore[blind-except]
                 print_exc()
                 continue
 
