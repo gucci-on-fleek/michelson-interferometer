@@ -38,7 +38,7 @@ dependencies = [
     # We use PyLabLib to interface with both the motor and detector hardware.
     "pylablib-lightweight[devio, extra] ~= 1.4",
 
-    # Polars is a modern version of Pandas which we use to save and manipulate
+    # Polars is a modern version of Pandas, which we use to save and manipulate
     # our measured data.
     "polars ~= 1.34",
 
@@ -66,7 +66,7 @@ dev = [
     "setuptools == 80.9.0",
 
     # Provides the type stubs for PyGObject.
-    "pygobject-stubs ~= 2.13.0",
+    "pygobject-stubs ~= 2.13",
 ]
 
 
@@ -76,7 +76,7 @@ dev = [
 
 [build-system]
 # Should be identical to the "dev" group above.
-requires = ["setuptools == 80.9.0", "pygobject-stubs ~= 2.13.0"]
+requires = ["setuptools == 80.9.0", "pygobject-stubs ~= 2.13"]
 
 # Use setuptools to build the project.
 build-backend = "setuptools.build_meta"
@@ -94,7 +94,7 @@ michelson_interferometer = ["*.ui"]
 [tool.uv]
 # This package only supports Linux due to the hardware interfacing code, and
 # I've only ever tested it on x86_64, so restrict to a single platform to reduce
-# the lockfile. size.
+# the lockfile size.
 environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
 
 # Wait for 1 week before installing package updates to avoid supply-chain
@@ -156,7 +156,7 @@ extend-ignore = [
     "undocumented-magic-method",
 ]
 
-# `pprint` is useful to have for debugging, allow it to be imported without
+# `pprint` is useful to have for debugging, so allow it to be imported without
 # triggering a lint error, even if it's not used in the code.
 pyflakes.allowed-unused-imports = ["pprint"]
 

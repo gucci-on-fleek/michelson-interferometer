@@ -18,8 +18,8 @@ Installation
 ### Student Instructions
 
 1.  Install Flatpak. This should already be installed for you on the lab
-    computers; if not, a staff member will need to install this as root
-    by running:
+    computers; if not, a staff member will need to install it as root by
+    running:
 
     ```console
     $ sudo apt install flatpak
@@ -46,7 +46,7 @@ Installation
     ```
 
 4.  [Enable the Flathub repository](https://flathub.org/en/setup), which
-    is required to install the required dependencies:
+    is required to install the application's dependencies:
 
     ```console
     $ flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -86,10 +86,11 @@ Launching
 
 After you've installed the Flatpak, there should be a new entry in your
 application menu called “Michelson Interferometer”; to launch it, simply
-click on the icon.
+click on its icon.
 
 If the icon doesn't show up, first try restarting your computer. If it
-still doesn't show up, you can always launch it manually by running:
+still doesn't show up, you can always launch this program manually by
+running:
 
 ```console
 $ flatpak run ca.maxchernoff.michelson_interferometer
@@ -220,7 +221,7 @@ Technical Details
 ### Internal Architecture
 
 Internally, the application is split into four threads, which
-communicate queues and lists. The following diagram explains the
+communicate via queues and lists. The following diagram explains the
 architecture:
 
 ```mermaid
@@ -278,7 +279,9 @@ The primary goal of this lab is to determine the wavelength of the light
 source used in the interferometer, and the “Wavelength” tab contains a
 plot that tells you this, but its inner workings are fairly complicated.
 To replicate this plot on your own, you'll want to refer to the source
-code, but here's an abridged explanation copied from my own lab report:
+code (the [`plots.py`](./michelson_interferometer/plots.py) file in
+particular), but here's an abridged explanation copied from my own lab
+report:
 
 > The detector data and motor data were collected from separate threads,
 > and were saved independently as a function of their respective
@@ -351,6 +354,11 @@ or [starting a new
 discussion](https://github.com/gucci-on-fleek/michelson-interferometer/discussions/new/choose)
 on GitHub. If you don't have a GitHub account, [my website lists some
 alternate contact methods](https://www.maxchernoff.ca/#contact).
+
+If you would like to contribute to this project, please either [open a
+new pull
+request](https://github.com/gucci-on-fleek/michelson-interferometer/pulls),
+email me a Git patch, or describe your changes in a new issue.
 
 
 Licence

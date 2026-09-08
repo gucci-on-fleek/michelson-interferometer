@@ -1,0 +1,25 @@
+# Michelson Interferometer Control Software
+# https://github.com/gucci-on-fleek/michelson-interferometer
+# SPDX-License-Identifier: MPL-2.0+ OR CC-BY-SA-4.0+
+# SPDX-FileCopyrightText: 2026 Max Chernoff
+
+cff-version: 1.2.0
+
+title: Michelson Interferometer Control Software
+type: software
+repository-code: https://github.com/gucci-on-fleek/michelson-interferometer
+message: You can cite this repository with the following BibTeX entry.
+# On GitHub, click the "Cite this repository" button in the sidebar of the
+# landing page (in the "About" section) to display this BibTeX entry.
+
+date-released: 2026-09-07 # %%dashdate
+version: 1.0.0 # %%version
+
+authors:
+  - given-names: Max
+    family-names: Chernoff
+    website: https://www.maxchernoff.ca
+
+license:
+  - MPL-2.0
+  - CC-BY-SA-4.0
